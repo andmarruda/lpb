@@ -19,5 +19,19 @@
         "illuminate/support": "^10.0|^11.0",
         "illuminate/database": "^10.0|^11.0",
         "mongodb/laravel-mongodb": "^4.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.5|^11.0",
+        "mockery/mockery": "^1.6"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Andmarruda\\Lpb\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/phpunit",
+        "test:unit": "vendor/bin/phpunit --testsuite=Unit",
+        "test:coverage": "vendor/bin/phpunit --coverage-html coverage"
     }
 }

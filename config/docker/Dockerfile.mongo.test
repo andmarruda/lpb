@@ -1,0 +1,70 @@
+FROM php:8.2-cli
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    zip \
+    unzip \
+    gnupg \
+    libssl-dev \
+    pkg-config \
+    && pecl install mongodb \
+    && docker-php-ext-enable mongodb \
+    && curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | gpg --dearmor -o /usr/share/keyrings/mongodb-archive-keyring.gpg \
+    && echo "deb [signed-by=/usr/share/keyrings/mongodb-archive-keyring.gpg] http://repo.mongodb.org/apt/debian bookworm/mongodb-org/7.0 main" | tee /etc/apt/sources.list.d/mongodb-org-7.0.list \
+    && apt-get update && apt-get install -y mongodb-org \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+ENV COMPOSER_ALLOW_SUPERUSER=1
+
+RUN mkdir -p /data/db
+
+RUN composer create-project laravel/laravel laravel-test --prefer-dist --no-interaction
+
+WORKDIR /app/laravel-test
+
+RUN composer require mongodb/laravel-mongodb:^4.0 --no-interaction
+
+COPY . /app/lpb-package
+
+RUN composer config repositories.lpb path /app/lpb-package && \
+    composer require andmarruda/lpb:@dev --no-interaction
+
+RUN php artisan vendor:publish --tag=lpb-config --force && \
+    php artisan vendor:publish --tag=lpb-migrations-mongodb --force
+
+RUN cat > config/database.php << 'EOF'
+<?php
+return [
+    'default' => env('DB_CONNECTION', 'mongodb'),
+    'connections' => [
+        'mongodb' => [
+            'driver' => 'mongodb',
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', 27017),
+            'database' => env('DB_DATABASE', 'lpb_test'),
+            'username' => env('DB_USERNAME', ''),
+            'password' => env('DB_PASSWORD', ''),
+            'options' => [
+                'database' => env('DB_AUTHENTICATION_DATABASE', 'admin'),
+            ],
+        ],
+    ],
+];
+EOF
+
+RUN echo "DB_CONNECTION=mongodb" >> .env && \
+    echo "DB_HOST=127.0.0.1" >> .env && \
+    echo "DB_PORT=27017" >> .env && \
+    echo "DB_DATABASE=lpb_test" >> .env && \
+    echo "LPB_DATABASE_DRIVER=mongodb" >> .env && \
+    echo "LPB_MONGODB_CONNECTION=mongodb" >> .env
+
+COPY mongo-start.sh /app/mongo-start.sh
+RUN chmod +x /app/mongo-start.sh
+
+CMD ["/app/mongo-start.sh"]

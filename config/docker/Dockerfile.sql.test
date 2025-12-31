@@ -1,0 +1,43 @@
+FROM php:8.2-cli
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    zip \
+    unzip \
+    sqlite3 \
+    libsqlite3-dev \
+    && docker-php-ext-install pdo pdo_sqlite \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+ENV COMPOSER_ALLOW_SUPERUSER=1
+
+RUN composer create-project laravel/laravel laravel-test --prefer-dist --no-interaction
+
+WORKDIR /app/laravel-test
+
+COPY . /app/lpb-package
+
+RUN composer config repositories.lpb path /app/lpb-package && \
+    composer require andmarruda/lpb:@dev --no-interaction
+
+RUN php artisan vendor:publish --tag=lpb-config --force && \
+    php artisan vendor:publish --tag=lpb-migrations-sql --force
+
+RUN sed -i 's/DB_CONNECTION=.*/DB_CONNECTION=sqlite/' .env && \
+    sed -i '/DB_HOST=/d' .env && \
+    sed -i '/DB_PORT=/d' .env && \
+    sed -i '/DB_DATABASE=/d' .env && \
+    sed -i '/DB_USERNAME=/d' .env && \
+    sed -i '/DB_PASSWORD=/d' .env && \
+    echo "LPB_DATABASE_DRIVER=sql" >> .env && \
+    echo "LPB_SQL_CONNECTION=sqlite" >> .env && \
+    touch database/database.sqlite
+
+RUN php artisan migrate --force
+
+CMD ["php", "artisan", "test"]
