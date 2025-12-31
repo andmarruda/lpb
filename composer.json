@@ -1,0 +1,23 @@
+{
+    "name": "andmarruda/lpb",
+    "description": "Laravel page builder with support for SQL and MongoDB databases, featuring intelligent caching strategies for high performance and scalable content rendering.",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Andmarruda\\Lpb\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Anderson Arruda",
+            "email": "anderson@sysborg.com.br"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "illuminate/support": "^10.0|^11.0",
+        "illuminate/database": "^10.0|^11.0",
+        "mongodb/laravel-mongodb": "^4.0"
+    }
+}
