@@ -1,5 +1,5 @@
 <?php
-namespace Andmarruda\Lpb\Repositories\Contracts;
+namespace Andmarruda\Lpb\Contracts;
 
 interface PageRepositoryInterface extends RepositoryInterface
 {

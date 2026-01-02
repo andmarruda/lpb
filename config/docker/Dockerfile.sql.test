@@ -22,10 +22,9 @@ WORKDIR /app/laravel-test
 
 COPY . /app/lpb-package
 
-RUN composer config repositories.lpb path /app/lpb-package && \
-    composer require andmarruda/lpb:@dev --no-interaction
-
-RUN php artisan vendor:publish --tag=lpb-config --force && \
+RUN composer config repositories.lpb '{"type": "path", "url": "/app/lpb-package", "options": {"symlink": false}}' && \
+    composer require andmarruda/lpb:@dev --no-interaction && \
+    php artisan vendor:publish --tag=lpb-config --force && \
     php artisan vendor:publish --tag=lpb-migrations-sql --force
 
 RUN sed -i 's/DB_CONNECTION=.*/DB_CONNECTION=sqlite/' .env && \
@@ -39,5 +38,9 @@ RUN sed -i 's/DB_CONNECTION=.*/DB_CONNECTION=sqlite/' .env && \
     touch database/database.sqlite
 
 RUN php artisan migrate --force
+
+RUN rm -rf tests/Unit tests/Feature && \
+    cp -r /app/lpb-package/tests . && \
+    cp /app/lpb-package/phpunit.sql.xml phpunit.xml
 
 CMD ["php", "artisan", "test"]

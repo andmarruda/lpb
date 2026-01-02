@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+         cacheDirectory=".phpunit.cache"
+         beStrictAboutOutputDuringTests="true"
+         failOnRisky="true"
+         failOnWarning="true">
+
+    <testsuites>
+        <testsuite name="Unit">
+            <directory>tests/Unit/Repositories/Sql</directory>
+            <file>tests/Unit/BaseRepositoryTest.php</file>
+        </testsuite>
+        <testsuite name="Feature">
+            <directory>tests/Feature/Sql</directory>
+        </testsuite>
+    </testsuites>
+
+    <source>
+        <include>
+            <directory>src/app</directory>
+        </include>
+        <exclude>
+            <directory>src/app/Providers</directory>
+            <directory>src/database</directory>
+        </exclude>
+    </source>
+
+    <coverage>
+        <report>
+            <html outputDirectory="coverage"/>
+            <text outputFile="php://stdout" showUncoveredFiles="false"/>
+        </report>
+    </coverage>
+
+    <php>
+        <env name="APP_ENV" value="testing"/>
+        <env name="LPB_DATABASE_DRIVER" value="sql"/>
+        <env name="LPB_SQL_CONNECTION" value="sqlite"/>
+    </php>
+</phpunit>

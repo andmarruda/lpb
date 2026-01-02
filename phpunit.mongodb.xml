@@ -10,10 +10,11 @@
 
     <testsuites>
         <testsuite name="Unit">
-            <directory>tests/Unit</directory>
+            <directory>tests/Unit/Repositories/Mongo</directory>
+            <file>tests/Unit/BaseRepositoryTest.php</file>
         </testsuite>
         <testsuite name="Feature">
-            <directory>tests/Feature</directory>
+            <directory>tests/Feature/Mongo</directory>
         </testsuite>
     </testsuites>
 
@@ -36,5 +37,7 @@
 
     <php>
         <env name="APP_ENV" value="testing"/>
+        <env name="LPB_DATABASE_DRIVER" value="mongodb"/>
+        <env name="LPB_MONGODB_CONNECTION" value="mongodb"/>
     </php>
 </phpunit>

@@ -2,9 +2,8 @@
 namespace Andmarruda\Lpb\Models\Mongo;
 
 use MongoDB\Laravel\Eloquent\Model;
-use Andmarruda\Lpb\Contracts\PageRepositoryInterface;
 
-class Page extends Model implements PageRepositoryInterface
+class Page extends Model
 {
     protected $connection = 'mongodb';
     protected $collection = 'lpb_pages';

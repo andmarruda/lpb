@@ -1,5 +1,6 @@
 <?php
-namespace Andmarruda\Lpb\Contracts;
+namespace Andmarruda\Lpb\Providers;
+
 use Illuminate\Support\ServiceProvider;
 use Andmarruda\Lpb\Repositories\EloquentRepository;
 use Andmarruda\Lpb\Repositories\MongoRepository;
@@ -31,9 +32,20 @@ class DatabaseAbstractionServiceProvider extends ServiceProvider
     public function boot(): void
     {
         if ($this->app->runningInConsole()) {
+            // Publish config
             $this->publishes([
                 __DIR__ . '/../../config/laravel-page-builder.php' => config_path('laravel-page-builder.php'),
-            ], 'config');
+            ], 'lpb-config');
+
+            // Publish SQL migrations
+            $this->publishes([
+                __DIR__ . '/../../database/migrations/sql' => database_path('migrations'),
+            ], 'lpb-migrations-sql');
+
+            // Publish MongoDB migrations
+            $this->publishes([
+                __DIR__ . '/../../database/migrations/mongodb' => database_path('migrations'),
+            ], 'lpb-migrations-mongodb');
         }
     }
 

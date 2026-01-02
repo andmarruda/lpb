@@ -23,18 +23,17 @@ ENV COMPOSER_ALLOW_SUPERUSER=1
 
 RUN mkdir -p /data/db
 
-RUN composer create-project laravel/laravel laravel-test --prefer-dist --no-interaction
+RUN composer create-project laravel/laravel laravel-test "^10.0" --prefer-dist --no-interaction
 
 WORKDIR /app/laravel-test
 
-RUN composer require mongodb/laravel-mongodb:^4.0 --no-interaction
+RUN composer require mongodb/laravel-mongodb:^4.0 --no-interaction --ignore-platform-req=ext-mongodb
 
 COPY . /app/lpb-package
 
-RUN composer config repositories.lpb path /app/lpb-package && \
-    composer require andmarruda/lpb:@dev --no-interaction
-
-RUN php artisan vendor:publish --tag=lpb-config --force && \
+RUN composer config repositories.lpb '{"type": "path", "url": "/app/lpb-package", "options": {"symlink": false}}' && \
+    composer require andmarruda/lpb:@dev --no-interaction && \
+    php artisan vendor:publish --tag=lpb-config --force && \
     php artisan vendor:publish --tag=lpb-migrations-mongodb --force
 
 RUN cat > config/database.php << 'EOF'
@@ -47,11 +46,6 @@ return [
             'host' => env('DB_HOST', '127.0.0.1'),
             'port' => env('DB_PORT', 27017),
             'database' => env('DB_DATABASE', 'lpb_test'),
-            'username' => env('DB_USERNAME', ''),
-            'password' => env('DB_PASSWORD', ''),
-            'options' => [
-                'database' => env('DB_AUTHENTICATION_DATABASE', 'admin'),
-            ],
         ],
     ],
 ];
@@ -64,7 +58,11 @@ RUN echo "DB_CONNECTION=mongodb" >> .env && \
     echo "LPB_DATABASE_DRIVER=mongodb" >> .env && \
     echo "LPB_MONGODB_CONNECTION=mongodb" >> .env
 
-COPY mongo-start.sh /app/mongo-start.sh
+RUN rm -rf tests/Unit tests/Feature && \
+    cp -r /app/lpb-package/tests . && \
+    cp /app/lpb-package/phpunit.mongodb.xml phpunit.xml
+
+COPY config/docker/mongo-start.sh /app/mongo-start.sh
 RUN chmod +x /app/mongo-start.sh
 
 CMD ["/app/mongo-start.sh"]
