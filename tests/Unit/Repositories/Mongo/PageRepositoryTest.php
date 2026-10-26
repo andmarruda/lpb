@@ -12,7 +12,7 @@ use Andmarruda\Lpb\Models\Mongo\Page;
  *
  * This test suite validates the behavior of PageRepository for MongoDB
  * databases using Mockery for mocking dependencies. MongoDB implementation
- * uses embedded documents for widgets and metatags.
+ * uses embedded documents for blocks and metatags.
  */
 class PageRepositoryTest extends TestCase
 {
@@ -102,7 +102,7 @@ class PageRepositoryTest extends TestCase
             'title' => 'New Page',
             'slug' => 'new-page',
             'status' => 'draft',
-            'widgets' => [],
+            'blocks' => [],
             'metatags' => []
         ];
 
@@ -310,76 +310,78 @@ class PageRepositoryTest extends TestCase
     }
 
     /**
-     * Test withWidgets returns embedded data without eager loading
+     * Test withBlocks returns embedded blocks without eager loading
      *
-     * In MongoDB, widgets are already embedded in the page document,
-     * so no eager loading is performed. This test verifies that
-     * find() is called directly without with().
+     * In MongoDB, blocks are embedded in the page document, so find() is
+     * called directly without with(). Blocks are ordered and gain page_id,
+     * and widget instances gain block_id.
      */
-    public function test_with_widgets_returns_embedded_data_without_eager_loading(): void
+    public function test_with_blocks_returns_embedded_blocks_without_eager_loading(): void
     {
         $id = 'mongo-id-123';
-        $expectedData = [
-            '_id' => $id,
-            'title' => 'Home',
-            'widgets' => [
-                [
-                    'widget' => 'hero',
-                    'position_x' => 0,
-                    'position_y' => 0,
-                    'settings' => [
-                        ['key' => 'title', 'value' => 'Welcome'],
-                        ['key' => 'image', 'value' => 'hero.jpg']
-                    ]
-                ]
-            ]
-        ];
-
         $pageMock = Mockery::mock();
         $pageMock->shouldReceive('toArray')
             ->once()
-            ->andReturn($expectedData);
+            ->andReturn([
+                'id' => $id,
+                'title' => 'Home',
+                'blocks' => [
+                    ['id' => 'b2', 'parent_id' => null, 'type' => 'column', 'order' => 1, 'widget_instances' => []],
+                    [
+                        'id' => 'b1',
+                        'parent_id' => null,
+                        'type' => 'row',
+                        'order' => 0,
+                        'widget_instances' => [
+                            ['id' => 'w1', 'widget' => 'hero', 'config' => ['title' => 'Welcome'], 'order' => 0]
+                        ]
+                    ],
+                ]
+            ]);
 
         $this->modelMock->shouldReceive('find')
             ->once()
             ->with($id)
             ->andReturn($pageMock);
 
-        $result = $this->repository->withWidgets($id);
+        $result = $this->repository->withBlocks($id);
 
-        $this->assertEquals($expectedData, $result);
-        $this->assertArrayHasKey('widgets', $result);
+        $this->assertSame(['b1', 'b2'], array_column($result['blocks'], 'id'));
+        $this->assertSame($id, $result['blocks'][0]['page_id']);
+        $this->assertSame('b1', $result['blocks'][0]['widget_instances'][0]['block_id']);
+        $this->assertSame(['title' => 'Welcome'], $result['blocks'][0]['widget_instances'][0]['config']);
     }
 
     /**
-     * Test withWidgets includes widgets array in response
-     *
-     * This test verifies that the withWidgets method returns page data
-     * with the embedded widgets array included.
+     * Test withBlocks returns an empty blocks list for a page without blocks
      */
-    public function test_with_widgets_includes_widgets_array_in_response(): void
+    public function test_with_blocks_returns_empty_list_without_blocks(): void
     {
         $id = 'mongo-id-123';
-        $widget = ['widget' => 'text_block', 'position_x' => 1];
-        $expectedData = [
-            '_id' => $id,
-            'widgets' => [$widget]
-        ];
-
         $pageMock = Mockery::mock();
         $pageMock->shouldReceive('toArray')
             ->once()
-            ->andReturn($expectedData);
+            ->andReturn(['id' => $id, 'title' => 'Home']);
 
         $this->modelMock->shouldReceive('find')
             ->once()
             ->with($id)
             ->andReturn($pageMock);
 
-        $result = $this->repository->withWidgets($id);
+        $this->assertSame([], $this->repository->withBlocks($id)['blocks']);
+    }
 
-        $this->assertArrayHasKey('widgets', $result);
-        $this->assertIsArray($result['widgets']);
+    /**
+     * Test withBlocks returns null when page not found
+     */
+    public function test_with_blocks_returns_null_when_page_not_found(): void
+    {
+        $this->modelMock->shouldReceive('find')
+            ->once()
+            ->with('missing')
+            ->andReturn(null);
+
+        $this->assertNull($this->repository->withBlocks('missing'));
     }
 
     /**
@@ -447,261 +449,6 @@ class PageRepositoryTest extends TestCase
 
         $this->assertArrayHasKey('metatags', $result);
         $this->assertIsArray($result['metatags']);
-    }
-
-    /**
-     * Test addWidget adds widget to page
-     *
-     * Verifies that addWidget method calls the model's addWidget method
-     * and returns the updated page data.
-     */
-    public function test_add_widget_adds_widget_to_page(): void
-    {
-        $pageId = 'mongo-id-123';
-        $widget = [
-            'widget' => 'text_block',
-            'position_x' => 1,
-            'position_y' => 0,
-            'settings' => [
-                ['key' => 'content', 'value' => 'Hello World']
-            ]
-        ];
-
-        $pageMock = Mockery::mock();
-        $pageMock->shouldReceive('addWidget')
-            ->once()
-            ->with($widget);
-
-        $pageMock->shouldReceive('fresh')
-            ->once()
-            ->andReturnSelf();
-
-        $pageMock->shouldReceive('toArray')
-            ->once()
-            ->andReturn([
-                '_id' => $pageId,
-                'widgets' => [$widget]
-            ]);
-
-        $this->modelMock->shouldReceive('find')
-            ->once()
-            ->with($pageId)
-            ->andReturn($pageMock);
-
-        $result = $this->repository->addWidget($pageId, $widget);
-
-        $this->assertNotNull($result);
-        $this->assertArrayHasKey('widgets', $result);
-    }
-
-    /**
-     * Test addWidget calls model addWidget method
-     *
-     * This test verifies that the addWidget repository method
-     * correctly delegates to the model's addWidget method.
-     */
-    public function test_add_widget_calls_model_add_widget_method(): void
-    {
-        $pageId = 'mongo-id-123';
-        $widget = ['widget' => 'hero', 'position_x' => 0];
-
-        $pageMock = Mockery::mock();
-        $pageMock->shouldReceive('addWidget')
-            ->once()
-            ->with($widget);
-
-        $pageMock->shouldReceive('fresh')
-            ->once()
-            ->andReturnSelf();
-
-        $pageMock->shouldReceive('toArray')
-            ->once()
-            ->andReturn(['_id' => $pageId, 'widgets' => [$widget]]);
-
-        $this->modelMock->shouldReceive('find')
-            ->once()
-            ->with($pageId)
-            ->andReturn($pageMock);
-
-        $this->repository->addWidget($pageId, $widget);
-
-        $this->expectNotToPerformAssertions();
-    }
-
-    /**
-     * Test addWidget returns updated page
-     *
-     * This test verifies that addWidget returns the freshly updated
-     * page data after adding the widget.
-     */
-    public function test_add_widget_returns_updated_page(): void
-    {
-        $pageId = 'mongo-id-123';
-        $widget = ['widget' => 'gallery'];
-        $expectedData = [
-            '_id' => $pageId,
-            'title' => 'Test',
-            'widgets' => [$widget]
-        ];
-
-        $pageMock = Mockery::mock();
-        $pageMock->shouldReceive('addWidget')
-            ->once()
-            ->with($widget);
-
-        $pageMock->shouldReceive('fresh')
-            ->once()
-            ->andReturnSelf();
-
-        $pageMock->shouldReceive('toArray')
-            ->once()
-            ->andReturn($expectedData);
-
-        $this->modelMock->shouldReceive('find')
-            ->once()
-            ->with($pageId)
-            ->andReturn($pageMock);
-
-        $result = $this->repository->addWidget($pageId, $widget);
-
-        $this->assertEquals($expectedData, $result);
-        $this->assertCount(1, $result['widgets']);
-    }
-
-    /**
-     * Test addWidget returns null when page not found
-     *
-     * This test verifies that addWidget returns null when trying
-     * to add a widget to a non-existent page.
-     */
-    public function test_add_widget_returns_null_when_page_not_found(): void
-    {
-        $pageId = 'non-existent-id';
-        $widget = ['widget' => 'hero'];
-
-        $this->modelMock->shouldReceive('find')
-            ->once()
-            ->with($pageId)
-            ->andReturn(null);
-
-        $result = $this->repository->addWidget($pageId, $widget);
-
-        $this->assertNull($result);
-    }
-
-    /**
-     * Test updateWidget updates widget at index
-     *
-     * This test verifies that updateWidget calls the model's updateWidget
-     * method with the correct index and data.
-     */
-    public function test_update_widget_updates_widget_at_index(): void
-    {
-        $pageId = 'mongo-id-123';
-        $widgetIndex = 0;
-        $widgetData = ['position_x' => 2, 'position_y' => 1];
-
-        $pageMock = Mockery::mock();
-        $pageMock->shouldReceive('updateWidget')
-            ->once()
-            ->with($widgetIndex, $widgetData);
-
-        $pageMock->shouldReceive('fresh')
-            ->once()
-            ->andReturnSelf();
-
-        $pageMock->shouldReceive('toArray')
-            ->once()
-            ->andReturn(['_id' => $pageId]);
-
-        $this->modelMock->shouldReceive('find')
-            ->once()
-            ->with($pageId)
-            ->andReturn($pageMock);
-
-        $result = $this->repository->updateWidget($pageId, $widgetIndex, $widgetData);
-
-        $this->assertNotNull($result);
-    }
-
-    /**
-     * Test updateWidget returns null when page not found
-     *
-     * This test verifies that updateWidget returns null when trying
-     * to update a widget on a non-existent page.
-     */
-    public function test_update_widget_returns_null_when_page_not_found(): void
-    {
-        $pageId = 'non-existent-id';
-        $widgetIndex = 0;
-        $widgetData = ['position_x' => 1];
-
-        $this->modelMock->shouldReceive('find')
-            ->once()
-            ->with($pageId)
-            ->andReturn(null);
-
-        $result = $this->repository->updateWidget($pageId, $widgetIndex, $widgetData);
-
-        $this->assertNull($result);
-    }
-
-    /**
-     * Test removeWidget removes widget at index
-     *
-     * This test verifies that removeWidget calls the model's removeWidget
-     * method with the correct index.
-     */
-    public function test_remove_widget_removes_widget_at_index(): void
-    {
-        $pageId = 'mongo-id-123';
-        $widgetIndex = 1;
-
-        $pageMock = Mockery::mock();
-        $pageMock->shouldReceive('removeWidget')
-            ->once()
-            ->with($widgetIndex);
-
-        $pageMock->shouldReceive('fresh')
-            ->once()
-            ->andReturnSelf();
-
-        $pageMock->shouldReceive('toArray')
-            ->once()
-            ->andReturn([
-                '_id' => $pageId,
-                'widgets' => []
-            ]);
-
-        $this->modelMock->shouldReceive('find')
-            ->once()
-            ->with($pageId)
-            ->andReturn($pageMock);
-
-        $result = $this->repository->removeWidget($pageId, $widgetIndex);
-
-        $this->assertNotNull($result);
-    }
-
-    /**
-     * Test removeWidget returns null when page not found
-     *
-     * This test verifies that removeWidget returns null when trying
-     * to remove a widget from a non-existent page.
-     */
-    public function test_remove_widget_returns_null_when_page_not_found(): void
-    {
-        $pageId = 'non-existent-id';
-        $widgetIndex = 0;
-
-        $this->modelMock->shouldReceive('find')
-            ->once()
-            ->with($pageId)
-            ->andReturn(null);
-
-        $result = $this->repository->removeWidget($pageId, $widgetIndex);
-
-        $this->assertNull($result);
     }
 
     /**

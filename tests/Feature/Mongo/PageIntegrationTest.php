@@ -3,7 +3,6 @@
 namespace Andmarruda\Lpb\Tests\Feature\Mongo;
 
 use Tests\TestCase;
-use Andmarruda\Lpb\Contracts\PageContentRepositoryInterface;
 use Andmarruda\Lpb\Contracts\PageRepositoryInterface;
 use Andmarruda\Lpb\Repositories\Mongo\PageRepository;
 use Andmarruda\Lpb\Models\Mongo\Page;
@@ -48,7 +47,7 @@ class PageIntegrationTest extends TestCase
             'title' => 'Test Page MongoDB',
             'slug' => 'test-page-mongo',
             'status' => 'published',
-            'widgets' => [],
+            'blocks' => [],
             'metatags' => []
         ];
 
@@ -69,7 +68,7 @@ class PageIntegrationTest extends TestCase
             'title' => 'About Us MongoDB',
             'slug' => 'about-us-mongo',
             'status' => 'published',
-            'widgets' => [],
+            'blocks' => [],
             'metatags' => []
         ]);
 
@@ -89,7 +88,7 @@ class PageIntegrationTest extends TestCase
             'title' => 'Published Page',
             'slug' => 'published-mongo',
             'status' => 'published',
-            'widgets' => [],
+            'blocks' => [],
             'metatags' => []
         ]);
 
@@ -97,7 +96,7 @@ class PageIntegrationTest extends TestCase
             'title' => 'Draft Page',
             'slug' => 'draft-mongo',
             'status' => 'draft',
-            'widgets' => [],
+            'blocks' => [],
             'metatags' => []
         ]);
 
@@ -109,81 +108,6 @@ class PageIntegrationTest extends TestCase
     }
 
     /**
-     * Test add widget to page
-     */
-    public function test_add_widget_to_page(): void
-    {
-        $page = $this->repository->create([
-            'title' => 'Page with Widget',
-            'slug' => 'page-widget',
-            'status' => 'published',
-            'widgets' => [],
-            'metatags' => []
-        ]);
-
-        $widget = [
-            'widget' => 'hero',
-            'position_x' => 0,
-            'position_y' => 0,
-            'settings' => [
-                ['key' => 'title', 'value' => 'Welcome']
-            ]
-        ];
-
-        $result = $this->repository->addWidget($page['id'], $widget);
-
-        $this->assertNotNull($result);
-        $this->assertArrayHasKey('widgets', $result);
-        $this->assertCount(1, $result['widgets']);
-        $this->assertEquals('hero', $result['widgets'][0]['widget']);
-    }
-
-    /**
-     * Test update widget on page
-     */
-    public function test_update_widget_on_page(): void
-    {
-        $page = $this->repository->create([
-            'title' => 'Page',
-            'slug' => 'page-update-widget',
-            'status' => 'published',
-            'widgets' => [
-                ['widget' => 'hero', 'position_x' => 0, 'position_y' => 0]
-            ],
-            'metatags' => []
-        ]);
-
-        $result = $this->repository->updateWidget($page['id'], 0, [
-            'position_x' => 1,
-            'position_y' => 2
-        ]);
-
-        $this->assertNotNull($result);
-    }
-
-    /**
-     * Test remove widget from page
-     */
-    public function test_remove_widget_from_page(): void
-    {
-        $page = $this->repository->create([
-            'title' => 'Page',
-            'slug' => 'page-remove-widget',
-            'status' => 'published',
-            'widgets' => [
-                ['widget' => 'hero', 'position_x' => 0],
-                ['widget' => 'text', 'position_x' => 1]
-            ],
-            'metatags' => []
-        ]);
-
-        $result = $this->repository->removeWidget($page['id'], 0);
-
-        $this->assertNotNull($result);
-        $this->assertArrayHasKey('widgets', $result);
-    }
-
-    /**
      * Test set metatag on page
      */
     public function test_set_metatag_on_page(): void
@@ -192,7 +116,7 @@ class PageIntegrationTest extends TestCase
             'title' => 'Page',
             'slug' => 'page-metatag',
             'status' => 'published',
-            'widgets' => [],
+            'blocks' => [],
             'metatags' => []
         ]);
 
@@ -215,7 +139,7 @@ class PageIntegrationTest extends TestCase
             'title' => 'Page',
             'slug' => 'page-get-metatag',
             'status' => 'published',
-            'widgets' => [],
+            'blocks' => [],
             'metatags' => [
                 ['name' => 'keywords', 'content' => 'laravel, mongodb, test']
             ]
@@ -227,6 +151,18 @@ class PageIntegrationTest extends TestCase
     }
 
     /**
+     * Test metatags are stored as embedded documents, not JSON strings
+     */
+    public function test_metatags_are_embedded_documents(): void
+    {
+        $page = $this->repository->create(['title' => 'Page', 'slug' => 'page-embedded', 'status' => 'draft']);
+
+        $this->repository->setMetatag($page['id'], 'description', 'Embedded');
+
+        $this->assertTrue(Page::where('metatags.name', 'description')->exists());
+    }
+
+    /**
      * Test delete page
      */
     public function test_delete_page(): void
@@ -235,7 +171,7 @@ class PageIntegrationTest extends TestCase
             'title' => 'To Delete',
             'slug' => 'to-delete-mongo',
             'status' => 'draft',
-            'widgets' => [],
+            'blocks' => [],
             'metatags' => []
         ]);
 
@@ -248,11 +184,10 @@ class PageIntegrationTest extends TestCase
     }
 
     /**
-     * Test the container binds the MongoDB repository for both page contracts
+     * Test the container binds the MongoDB page repository
      */
-    public function test_container_binds_mongo_repositories(): void
+    public function test_container_binds_mongo_page_repository(): void
     {
         $this->assertInstanceOf(PageRepository::class, app(PageRepositoryInterface::class));
-        $this->assertInstanceOf(PageRepository::class, app(PageContentRepositoryInterface::class));
     }
 }

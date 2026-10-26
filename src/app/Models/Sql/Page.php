@@ -52,13 +52,13 @@ class Page extends Model
     }
 
     /**
-     * Widgets relationship
-     * 
+     * Blocks relationship
+     *
      * @return HasMany
      */
-    public function widgets(): HasMany
+    public function blocks(): HasMany
     {
-        return $this->hasMany(PageWidget::class, 'lpb_page_id', 'id')->orderBy('order');
+        return $this->hasMany(Block::class, 'page_id', 'id')->orderBy('order')->orderBy('id');
     }
 
     /**

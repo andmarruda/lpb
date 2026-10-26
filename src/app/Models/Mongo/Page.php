@@ -20,13 +20,13 @@ class Page extends Model
         'template_id',
         'template_slug',
         'metatags',
-        'widgets',
+        'blocks',
     ];
 
+    // metatags and blocks have no cast: an "array" cast would store them as
+    // JSON strings instead of embedded documents.
     protected $casts = [
         'status' => PublishState::class,
-        'metatags' => 'array',
-        'widgets' => 'array',
     ];
 
     /**
@@ -74,53 +74,6 @@ class Page extends Model
     public function scopeDraft($query)
     {
         return $query->where('status', PublishState::Draft->value);
-    }
-
-    /**
-     * Add a widget to the page
-     * 
-     * @param array $widget
-     * @return void
-     */
-    public function addWidget(array $widget): void
-    {
-        $widgets = $this->widgets ?? [];
-        $widgets[] = $widget;
-        $this->widgets = $widgets;
-        $this->save();
-    }
-
-    /**
-     * Update a widget at a specific index
-     * 
-     * @param int $index
-     * @param array $data
-     * @return void
-     */
-    public function updateWidget(int $index, array $data): void
-    {
-        $widgets = $this->widgets ?? [];
-        if (isset($widgets[$index])) {
-            $widgets[$index] = array_merge($widgets[$index], $data);
-            $this->widgets = $widgets;
-            $this->save();
-        }
-    }
-
-    /**
-     * Remove a widget at a specific index
-     * 
-     * @param int $index
-     * @return void
-     */
-    public function removeWidget(int $index): void
-    {
-        $widgets = $this->widgets ?? [];
-        if (isset($widgets[$index])) {
-            array_splice($widgets, $index, 1);
-            $this->widgets = $widgets;
-            $this->save();
-        }
     }
 
     /**

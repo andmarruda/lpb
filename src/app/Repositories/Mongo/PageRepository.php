@@ -6,16 +6,15 @@ use Andmarruda\Lpb\Models\Mongo\Page;
 use Andmarruda\Lpb\Repositories\BaseRepository;
 use Andmarruda\Lpb\ValueObjects\PublishState;
 use Andmarruda\Lpb\Contracts\PageRepositoryInterface;
-use Andmarruda\Lpb\Contracts\PageContentRepositoryInterface;
 
 /**
  * MongoDB implementation of the Page repository.
  *
  * This repository handles page data stored in MongoDB with embedded documents.
- * It extends BaseRepository for common CRUD operations. Unlike SQL, widgets and
+ * It extends BaseRepository for common CRUD operations. Unlike SQL, blocks and
  * metatags are already embedded in the page document, so no eager loading is needed.
  */
-class PageRepository extends BaseRepository implements PageRepositoryInterface, PageContentRepositoryInterface
+class PageRepository extends BaseRepository implements PageRepositoryInterface
 {
     /**
      * Create a new MongoDB page repository instance.
@@ -50,18 +49,24 @@ class PageRepository extends BaseRepository implements PageRepositoryInterface, 
     }
 
     /**
-     * Find a page with its widgets.
+     * Find a page with its blocks.
      *
-     * In MongoDB, widgets are already embedded in the page document,
-     * so this method simply returns the page without any eager loading.
+     * Blocks are embedded in the page document, so no eager loading is needed;
+     * they are shaped like the SQL output (ordered, with page_id and block_id).
      *
      * @param string|int $id The page identifier
-     * @return array|null The page with embedded widgets as array or null if not found
+     * @return array|null The page with blocks as array or null if not found
      */
-    public function withWidgets(string|int $id): ?array
+    public function withBlocks(string|int $id): ?array
     {
         $page = $this->model->find($id);
-        return $page ? $page->toArray() : null;
+        if (!$page) {
+            return null;
+        }
+
+        $data = $page->toArray();
+        $data['blocks'] = EmbeddedBlocks::presentAll((string) ($data['id'] ?? $data['_id']), $data['blocks'] ?? []);
+        return $data;
     }
 
     /**
@@ -89,58 +94,6 @@ class PageRepository extends BaseRepository implements PageRepositoryInterface, 
     {
         $status = $status instanceof PublishState ? $status->value : $status;
         return $this->model->where('status', $status)->get()->toArray();
-    }
-
-    /**
-     * Add a widget to an existing page.
-     *
-     * @param string|int $pageId The page identifier
-     * @param array $widget The widget data to add
-     * @return array|null The updated page as array or null if not found
-     */
-    public function addWidget(string|int $pageId, array $widget): ?array
-    {
-        $page = $this->model->find($pageId);
-        if ($page) {
-            $page->addWidget($widget);
-            return $page->fresh()->toArray();
-        }
-        return null;
-    }
-
-    /**
-     * Update a widget in an existing page.
-     *
-     * @param string|int $pageId The page identifier
-     * @param int $widgetKey The widget array index
-     * @param array $data The widget data to update
-     * @return array|null The updated page as array or null if not found
-     */
-    public function updateWidget(string|int $pageId, int $widgetKey, array $data): ?array
-    {
-        $page = $this->model->find($pageId);
-        if ($page) {
-            $page->updateWidget($widgetKey, $data);
-            return $page->fresh()->toArray();
-        }
-        return null;
-    }
-
-    /**
-     * Remove a widget from an existing page.
-     *
-     * @param string|int $pageId The page identifier
-     * @param int $widgetKey The widget array index
-     * @return array|null The updated page as array or null if not found
-     */
-    public function removeWidget(string|int $pageId, int $widgetKey): ?array
-    {
-        $page = $this->model->find($pageId);
-        if ($page) {
-            $page->removeWidget($widgetKey);
-            return $page->fresh()->toArray();
-        }
-        return null;
     }
 
     /**

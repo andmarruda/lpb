@@ -383,23 +383,24 @@ class PageRepositoryTest extends TestCase
     }
 
     /**
-     * Test withWidgets eager loads widgets relationship
+     * Test withBlocks eager loads blocks and widget instances
      *
-     * Verifies that withWidgets method uses Eloquent's with() method
-     * to eager load the widgets relationship, preventing N+1 queries.
+     * Verifies that withBlocks method uses Eloquent's with() method
+     * to eager load blocks and their widget instances, preventing N+1 queries.
      */
-    public function test_with_widgets_eager_loads_widgets_relationship(): void
+    public function test_with_blocks_eager_loads_blocks_and_widget_instances(): void
     {
         $id = '9d4e6f8a-1234-5678-9abc-def012345678';
         $expectedData = [
             'id' => $id,
             'title' => 'Home',
-            'widgets' => [
+            'blocks' => [
                 [
-                    'id' => 'widget-1',
-                    'widget' => 'hero',
-                    'position_x' => 0,
-                    'position_y' => 0
+                    'id' => 1,
+                    'type' => 'row',
+                    'widget_instances' => [
+                        ['id' => 1, 'widget' => 'hero', 'config' => []]
+                    ]
                 ]
             ]
         ];
@@ -417,22 +418,22 @@ class PageRepositoryTest extends TestCase
 
         $this->modelMock->shouldReceive('with')
             ->once()
-            ->with('widgets')
+            ->with('blocks.widgetInstances')
             ->andReturn($queryMock);
 
-        $result = $this->repository->withWidgets($id);
+        $result = $this->repository->withBlocks($id);
 
         $this->assertEquals($expectedData, $result);
-        $this->assertArrayHasKey('widgets', $result);
+        $this->assertArrayHasKey('blocks', $result);
     }
 
     /**
-     * Test withWidgets returns null when page not found
+     * Test withBlocks returns null when page not found
      *
-     * This test verifies that withWidgets returns null when
+     * This test verifies that withBlocks returns null when
      * the requested page does not exist.
      */
-    public function test_with_widgets_returns_null_when_page_not_found(): void
+    public function test_with_blocks_returns_null_when_page_not_found(): void
     {
         $id = 'non-existent-id';
 
@@ -444,10 +445,10 @@ class PageRepositoryTest extends TestCase
 
         $this->modelMock->shouldReceive('with')
             ->once()
-            ->with('widgets')
+            ->with('blocks.widgetInstances')
             ->andReturn($queryMock);
 
-        $result = $this->repository->withWidgets($id);
+        $result = $this->repository->withBlocks($id);
 
         $this->assertNull($result);
     }

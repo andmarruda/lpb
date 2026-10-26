@@ -75,7 +75,7 @@ return [
     |
     */
     'performance' => [
-        'eager_load_widgets' => true,
+        'eager_load_blocks' => true,
         'eager_load_metatags' => true,
         'chunk_size' => 100,
     ],

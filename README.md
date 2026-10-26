@@ -70,23 +70,24 @@ $page = $repo->create([
 ]);
 ```
 
-### MongoDB Specific Features
+### Blocks and Widgets
+
+Resolve repositories from the container so the configured driver is used:
 
 ```php
-use Andmarruda\Lpb\Repositories\Mongo\PageRepository;
-use Andmarruda\Lpb\Models\Mongo\Page;
+use Andmarruda\Lpb\Contracts\BlockRepositoryInterface;
+use Andmarruda\Lpb\Contracts\PageRepositoryInterface;
 
-$repo = new PageRepository(new Page());
+$pages = app(PageRepositoryInterface::class);
+$blocks = app(BlockRepositoryInterface::class);
 
-$page = $repo->addWidget($pageId, [
-    'widget' => 'hero',
-    'position_x' => 0,
-    'settings' => [
-        ['key' => 'title', 'value' => 'Welcome']
-    ]
-]);
+$row = $blocks->create(['page_id' => $pageId, 'type' => 'row']);
+$column = $blocks->create(['page_id' => $pageId, 'type' => 'column', 'parent_id' => $row['id']]);
 
-$repo->setMetatag($pageId, 'description', 'Page description');
+$blocks->addWidgetInstance($column['id'], 'App\Widgets\HeroWidget', ['title' => 'Welcome']);
+
+$pages->setMetatag($pageId, 'description', 'Page description');
+$page = $pages->withBlocks($pageId);
 ```
 
 ## Testing
