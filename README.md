@@ -6,7 +6,7 @@ Laravel page builder with dual-database support: SQL (Eloquent) and MongoDB.
 
 - **Dual Database Support**: Choose between SQL or MongoDB
 - **Repository Pattern**: Clean abstraction layer
-- **Embedded Documents**: MongoDB optimized with embedded widgets/metatags
+- **Embedded Documents**: MongoDB stores blocks, widget instances, metatags and menu items inside their parent document
 - **High Performance**: 1 query vs 4-20 queries (SQL) for page rendering
 - **100% Test Coverage**: Unit and integration tests
 
@@ -42,8 +42,6 @@ LPB_SQL_CONNECTION=mysql
 
 ```bash
 composer require mongodb/laravel-mongodb:^5.0
-php artisan vendor:publish --tag=lpb-migrations-mongodb
-php artisan migrate
 ```
 
 Configure `.env`:
@@ -52,6 +50,14 @@ Configure `.env`:
 LPB_DATABASE_DRIVER=mongodb
 LPB_MONGODB_CONNECTION=mongodb
 ```
+
+Create the collections with their validators and indexes (safe to re-run):
+
+```bash
+php artisan lpb:install-mongo
+```
+
+See [docs/MONGODB_SCHEMA.md](docs/MONGODB_SCHEMA.md) for the document structure.
 
 ## Usage
 

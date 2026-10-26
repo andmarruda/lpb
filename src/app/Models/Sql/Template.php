@@ -1,6 +1,7 @@
 <?php
 namespace Andmarruda\Lpb\Models\Sql;
 
+use Andmarruda\Lpb\Models\Concerns\UsesConfiguredConnection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -11,7 +12,7 @@ use Andmarruda\Lpb\ValueObjects\TemplateStatus;
 
 class Template extends Model
 {
-    use HasUuids;
+    use HasUuids, UsesConfiguredConnection;
 
     protected $table = 'lpb_templates';
 

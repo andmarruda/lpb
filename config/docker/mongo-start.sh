@@ -8,4 +8,6 @@ sleep 3
 
 cd /app/laravel-test
 
+php artisan lpb:install-mongo
+
 php artisan test

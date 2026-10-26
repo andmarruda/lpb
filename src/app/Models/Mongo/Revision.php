@@ -1,16 +1,19 @@
 <?php
 namespace Andmarruda\Lpb\Models\Mongo;
 
+use Andmarruda\Lpb\Models\Concerns\UsesConfiguredConnection;
 use MongoDB\Laravel\Eloquent\Model;
 use LogicException;
 use Andmarruda\Lpb\ValueObjects\PublishState;
 
 class Revision extends Model
 {
+    use UsesConfiguredConnection;
+
     const UPDATED_AT = null;
 
     protected $connection = 'mongodb';
-    protected $collection = 'lpb_revisions';
+    protected $table = 'lpb_revisions';
 
     protected $fillable = [
         'revisionable_type',

@@ -1,14 +1,17 @@
 <?php
 namespace Andmarruda\Lpb\Models\Mongo;
 
+use Andmarruda\Lpb\Models\Concerns\UsesConfiguredConnection;
 use MongoDB\Laravel\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Andmarruda\Lpb\ValueObjects\Slug;
 
 class Menu extends Model
 {
+    use UsesConfiguredConnection;
+
     protected $connection = 'mongodb';
-    protected $collection = 'lpb_menus';
+    protected $table = 'lpb_menus';
 
     // items is written by the repository, which assigns item ids.
     protected $fillable = [

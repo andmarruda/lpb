@@ -1,6 +1,7 @@
 <?php
 namespace Andmarruda\Lpb\Models\Sql;
 
+use Andmarruda\Lpb\Models\Concerns\UsesConfiguredConnection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -8,6 +9,8 @@ use Andmarruda\Lpb\ValueObjects\Slug;
 
 class Menu extends Model
 {
+    use UsesConfiguredConnection;
+
     protected $table = 'lpb_menus';
 
     protected $fillable = [

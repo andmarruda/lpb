@@ -5,6 +5,10 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
+    public function getConnection(): ?string {
+        return config('laravel-page-builder.connections.sql') ?: parent::getConnection();
+    }
+
     public function up(): void {
         Schema::create('lpb_blocks', function (Blueprint $table) {
             $table->id();

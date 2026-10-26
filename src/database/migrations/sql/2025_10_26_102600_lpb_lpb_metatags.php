@@ -6,6 +6,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
+    public function getConnection(): ?string {
+        return config('laravel-page-builder.connections.sql') ?: parent::getConnection();
+    }
+
     public function up(): void {
         // Create table with CHECK constraint for SQLite compatibility
         $driver = Schema::getConnection()->getDriverName();

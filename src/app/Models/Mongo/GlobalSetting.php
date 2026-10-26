@@ -1,12 +1,15 @@
 <?php
 namespace Andmarruda\Lpb\Models\Mongo;
 
+use Andmarruda\Lpb\Models\Concerns\UsesConfiguredConnection;
 use MongoDB\Laravel\Eloquent\Model;
 
 class GlobalSetting extends Model
 {
+    use UsesConfiguredConnection;
+
     protected $connection = 'mongodb';
-    protected $collection = 'lpb_global_settings';
+    protected $table = 'lpb_global_settings';
 
     protected $fillable = [
         'key',

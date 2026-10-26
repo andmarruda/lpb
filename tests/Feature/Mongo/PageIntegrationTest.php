@@ -2,6 +2,7 @@
 
 namespace Andmarruda\Lpb\Tests\Feature\Mongo;
 
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 use Andmarruda\Lpb\Contracts\PageRepositoryInterface;
 use Andmarruda\Lpb\Repositories\Mongo\PageRepository;
@@ -189,5 +190,15 @@ class PageIntegrationTest extends TestCase
     public function test_container_binds_mongo_page_repository(): void
     {
         $this->assertInstanceOf(PageRepository::class, app(PageRepositoryInterface::class));
+    }
+
+    /**
+     * Test pages are stored in the lpb_pages collection
+     */
+    public function test_pages_are_stored_in_prefixed_collection(): void
+    {
+        $this->repository->create(['title' => 'Home', 'slug' => 'home-collection']);
+
+        $this->assertSame(1, DB::connection('mongodb')->getDatabase()->selectCollection('lpb_pages')->countDocuments(['slug' => 'home-collection']));
     }
 }

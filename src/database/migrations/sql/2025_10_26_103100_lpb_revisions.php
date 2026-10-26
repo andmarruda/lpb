@@ -5,6 +5,10 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
+    public function getConnection(): ?string {
+        return config('laravel-page-builder.connections.sql') ?: parent::getConnection();
+    }
+
     public function up(): void {
         // Append-only: no updated_at, no foreign key, so history outlives the entity
         Schema::create('lpb_revisions', function (Blueprint $table) {

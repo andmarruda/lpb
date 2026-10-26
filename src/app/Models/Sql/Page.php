@@ -1,6 +1,7 @@
 <?php 
 namespace Andmarruda\Lpb\Models\Sql;
 
+use Andmarruda\Lpb\Models\Concerns\UsesConfiguredConnection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -13,7 +14,7 @@ use Andmarruda\Lpb\ValueObjects\Slug;
 
 class Page extends Model
 {
-    use HasFactory, HasUuids;
+    use HasFactory, HasUuids, UsesConfiguredConnection;
 
     protected $table = 'lpb_pages';
 

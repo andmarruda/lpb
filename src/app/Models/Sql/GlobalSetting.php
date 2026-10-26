@@ -1,10 +1,13 @@
 <?php
 namespace Andmarruda\Lpb\Models\Sql;
 
+use Andmarruda\Lpb\Models\Concerns\UsesConfiguredConnection;
 use Illuminate\Database\Eloquent\Model;
 
 class GlobalSetting extends Model
 {
+    use UsesConfiguredConnection;
+
     protected $table = 'lpb_global_settings';
 
     protected $fillable = [

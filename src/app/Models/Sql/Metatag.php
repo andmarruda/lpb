@@ -1,11 +1,14 @@
 <?php
 namespace Andmarruda\Lpb\Models\Sql;
 
+use Andmarruda\Lpb\Models\Concerns\UsesConfiguredConnection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Metatag extends Model
 {
+    use UsesConfiguredConnection;
+
     protected $table = 'lpb_metatags';
 
     protected $fillable = [

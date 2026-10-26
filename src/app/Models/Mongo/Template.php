@@ -1,6 +1,7 @@
 <?php
 namespace Andmarruda\Lpb\Models\Mongo;
 
+use Andmarruda\Lpb\Models\Concerns\UsesConfiguredConnection;
 use MongoDB\Laravel\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Andmarruda\Lpb\Casts\SeoCast;
@@ -9,8 +10,10 @@ use Andmarruda\Lpb\ValueObjects\TemplateStatus;
 
 class Template extends Model
 {
+    use UsesConfiguredConnection;
+
     protected $connection = 'mongodb';
-    protected $collection = 'lpb_templates';
+    protected $table = 'lpb_templates';
 
     protected $fillable = [
         'name',

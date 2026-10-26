@@ -2,6 +2,7 @@
 namespace Andmarruda\Lpb\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Andmarruda\Lpb\Console\InstallMongoCommand;
 use Andmarruda\Lpb\Contracts\PageRepositoryInterface;
 use Andmarruda\Lpb\Contracts\BlockRepositoryInterface;
 use Andmarruda\Lpb\Contracts\MenuRepositoryInterface;
@@ -54,10 +55,8 @@ class DatabaseAbstractionServiceProvider extends ServiceProvider
                 __DIR__ . '/../../database/migrations/sql' => database_path('migrations'),
             ], 'lpb-migrations-sql');
 
-            // Publish MongoDB migrations
-            $this->publishes([
-                __DIR__ . '/../../database/migrations/mongodb' => database_path('migrations'),
-            ], 'lpb-migrations-mongodb');
+            // MongoDB collections, validators and indexes are created by a command instead of migrations
+            $this->commands([InstallMongoCommand::class]);
         }
     }
 

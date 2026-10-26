@@ -33,8 +33,7 @@ COPY . /app/lpb-package
 
 RUN composer config repositories.lpb '{"type": "path", "url": "/app/lpb-package", "options": {"symlink": false}}' && \
     composer require andmarruda/lpb:@dev --no-interaction && \
-    php artisan vendor:publish --tag=lpb-config --force && \
-    php artisan vendor:publish --tag=lpb-migrations-mongodb --force
+    php artisan vendor:publish --tag=lpb-config --force
 
 RUN cat > config/database.php << 'EOF'
 <?php

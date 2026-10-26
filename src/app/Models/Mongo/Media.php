@@ -1,13 +1,14 @@
 <?php
 namespace Andmarruda\Lpb\Models\Mongo;
 
+use Andmarruda\Lpb\Models\Concerns\UsesConfiguredConnection;
 use MongoDB\Laravel\Eloquent\Model;
 
 class Media extends Model
 {
-    protected $connection = 'mongodb';
+    use UsesConfiguredConnection;
 
-    // $table instead of $collection: "collection" is also an attribute of this model.
+    protected $connection = 'mongodb';
     protected $table = 'lpb_media';
 
     protected $fillable = [

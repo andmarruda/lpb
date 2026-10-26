@@ -1,12 +1,15 @@
 <?php
 namespace Andmarruda\Lpb\Models\Sql;
 
+use Andmarruda\Lpb\Models\Concerns\UsesConfiguredConnection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Block extends Model
 {
+    use UsesConfiguredConnection;
+
     protected $table = 'lpb_blocks';
 
     protected $fillable = [
