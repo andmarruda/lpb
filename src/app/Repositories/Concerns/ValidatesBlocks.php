@@ -9,6 +9,8 @@ use Andmarruda\Lpb\Exceptions\InvalidValueException;
  */
 trait ValidatesBlocks
 {
+    use ValidatesOrder;
+
     /**
      * Extract and validate the writable block attributes (type, order, parent_id).
      *
@@ -43,19 +45,5 @@ trait ValidatesBlocks
         if (trim($widget) === '') {
             throw new InvalidValueException('Widget must be a non-empty class name or alias.');
         }
-    }
-
-    /**
-     * Orders are stored as unsigned small integers.
-     *
-     * @param mixed $order
-     * @return int
-     */
-    protected function validOrder(mixed $order): int
-    {
-        if (!is_int($order) || $order < 0 || $order > 65535) {
-            throw new InvalidValueException('Order must be an integer between 0 and 65535.');
-        }
-        return $order;
     }
 }

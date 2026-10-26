@@ -4,6 +4,8 @@ namespace Andmarruda\Lpb\Providers;
 use Illuminate\Support\ServiceProvider;
 use Andmarruda\Lpb\Contracts\PageRepositoryInterface;
 use Andmarruda\Lpb\Contracts\BlockRepositoryInterface;
+use Andmarruda\Lpb\Contracts\MenuRepositoryInterface;
+use Andmarruda\Lpb\Contracts\MediaRepositoryInterface;
 use Andmarruda\Lpb\Contracts\TemplateRepositoryInterface;
 use Andmarruda\Lpb\Repositories\Sql;
 use Andmarruda\Lpb\Repositories\Mongo;
@@ -19,6 +21,8 @@ class DatabaseAbstractionServiceProvider extends ServiceProvider
         PageRepositoryInterface::class        => [Sql\PageRepository::class, Mongo\PageRepository::class],
         TemplateRepositoryInterface::class    => [Sql\TemplateRepository::class, Mongo\TemplateRepository::class],
         BlockRepositoryInterface::class       => [Sql\BlockRepository::class, Mongo\BlockRepository::class],
+        MenuRepositoryInterface::class        => [Sql\MenuRepository::class, Mongo\MenuRepository::class],
+        MediaRepositoryInterface::class       => [Sql\MediaRepository::class, Mongo\MediaRepository::class],
     ];
 
     public function register(): void

@@ -6,6 +6,7 @@ use Andmarruda\Lpb\Models\Sql\Block;
 use Andmarruda\Lpb\Models\Sql\Page;
 use Andmarruda\Lpb\Models\Sql\WidgetInstance;
 use Andmarruda\Lpb\Repositories\BaseRepository;
+use Andmarruda\Lpb\Repositories\Concerns\GuardsParents;
 use Andmarruda\Lpb\Repositories\Concerns\ValidatesBlocks;
 use Andmarruda\Lpb\Contracts\BlockRepositoryInterface;
 use Andmarruda\Lpb\Exceptions\InvalidRelationException;
@@ -18,7 +19,7 @@ use Andmarruda\Lpb\Exceptions\InvalidRelationException;
  */
 class BlockRepository extends BaseRepository implements BlockRepositoryInterface
 {
-    use ValidatesBlocks;
+    use GuardsParents, ValidatesBlocks;
 
     /**
      * Create a new SQL block repository instance.
@@ -70,7 +71,7 @@ class BlockRepository extends BaseRepository implements BlockRepositoryInterface
 
         $attributes = $this->blockAttributes($data, true);
         if (($attributes['parent_id'] ?? null) !== null) {
-            $this->assertParent((string) $pageId, $attributes['parent_id'], null);
+            $this->assertParentRecord($this->model, 'page_id', $pageId, $attributes['parent_id'], null, 'block');
         }
 
         $block = $this->model->create(['page_id' => $pageId] + $attributes);
@@ -93,7 +94,7 @@ class BlockRepository extends BaseRepository implements BlockRepositoryInterface
 
         $attributes = $this->blockAttributes($data, false);
         if (($attributes['parent_id'] ?? null) !== null) {
-            $this->assertParent($block->page_id, $attributes['parent_id'], $block->getKey());
+            $this->assertParentRecord($this->model, 'page_id', $block->page_id, $attributes['parent_id'], $block->getKey(), 'block');
         }
 
         $block->update($attributes);
@@ -174,10 +175,14 @@ class BlockRepository extends BaseRepository implements BlockRepositoryInterface
      *
      * @param string|int $pageId The page identifier
      * @param array $orderedBlockIds Block identifiers in the desired order
-     * @return bool False, with nothing changed, if an id repeats or is not a block of the page
+     * @return bool False, with nothing changed, if the page is missing or an id repeats or is not a block of the page
      */
     public function reorder(string|int $pageId, array $orderedBlockIds): bool
     {
+        if (!$this->pages->whereKey($pageId)->exists()) {
+            return false;
+        }
+
         $ids = array_values($orderedBlockIds);
         if (count($ids) !== count(array_unique(array_map('strval', $ids)))) {
             return false;
@@ -194,27 +199,5 @@ class BlockRepository extends BaseRepository implements BlockRepositoryInterface
         });
 
         return true;
-    }
-
-    /**
-     * Ensure a parent block belongs to the page and would not create a cycle.
-     *
-     * @param string $pageId
-     * @param string|int $parentId
-     * @param string|int|null $blockId The block being updated, or null when creating
-     * @return void
-     */
-    protected function assertParent(string $pageId, string|int $parentId, string|int|null $blockId): void
-    {
-        $parent = $this->model->find($parentId);
-        if (!$parent || $parent->page_id !== $pageId) {
-            throw new InvalidRelationException("Parent block '{$parentId}' not found on page '{$pageId}'.");
-        }
-
-        for ($current = $parent; $current; $current = $current->parent_id ? $this->model->find($current->parent_id) : null) {
-            if ($blockId !== null && (string) $current->getKey() === (string) $blockId) {
-                throw new InvalidRelationException("Block '{$blockId}' cannot be nested inside itself.");
-            }
-        }
     }
 }

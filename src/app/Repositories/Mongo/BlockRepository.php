@@ -3,6 +3,7 @@
 namespace Andmarruda\Lpb\Repositories\Mongo;
 
 use Andmarruda\Lpb\Models\Mongo\Page;
+use Andmarruda\Lpb\Repositories\Concerns\GuardsParents;
 use Andmarruda\Lpb\Repositories\Concerns\ValidatesBlocks;
 use Andmarruda\Lpb\Contracts\BlockRepositoryInterface;
 use Andmarruda\Lpb\Exceptions\InvalidRelationException;
@@ -18,7 +19,7 @@ use Illuminate\Support\Str;
  */
 class BlockRepository implements BlockRepositoryInterface
 {
-    use ValidatesBlocks;
+    use GuardsParents, ValidatesBlocks;
 
     /**
      * Create a new MongoDB block repository instance.
@@ -71,7 +72,7 @@ class BlockRepository implements BlockRepositoryInterface
         $blocks = $page->blocks ?? [];
         $parentId = isset($attributes['parent_id']) ? (string) $attributes['parent_id'] : null;
         if ($parentId !== null) {
-            $this->assertParent($blocks, $parentId, null);
+            $this->assertEmbeddedParent($blocks, $parentId, null, 'block');
         }
 
         $block = [
@@ -106,7 +107,7 @@ class BlockRepository implements BlockRepositoryInterface
         if (array_key_exists('parent_id', $attributes)) {
             $attributes['parent_id'] = $attributes['parent_id'] === null ? null : (string) $attributes['parent_id'];
             if ($attributes['parent_id'] !== null) {
-                $this->assertParent($blocks, $attributes['parent_id'], (string) $id);
+                $this->assertEmbeddedParent($blocks, $attributes['parent_id'], (string) $id, 'block');
             }
         }
 
@@ -231,7 +232,7 @@ class BlockRepository implements BlockRepositoryInterface
      *
      * @param string|int $pageId The page identifier
      * @param array $orderedBlockIds Block identifiers in the desired order
-     * @return bool False, with nothing changed, if an id repeats or is not a block of the page
+     * @return bool False, with nothing changed, if the page is missing or an id repeats or is not a block of the page
      */
     public function reorder(string|int $pageId, array $orderedBlockIds): bool
     {
@@ -291,28 +292,6 @@ class BlockRepository implements BlockRepositoryInterface
             true
         );
         return $instanceIndex === false ? [null, null, null] : [$page, $index, $instanceIndex];
-    }
-
-    /**
-     * Ensure a parent block is on the same page and would not create a cycle.
-     *
-     * @param array $blocks The page's blocks
-     * @param string $parentId
-     * @param string|null $blockId The block being updated, or null when creating
-     * @return void
-     */
-    protected function assertParent(array $blocks, string $parentId, ?string $blockId): void
-    {
-        $parents = array_column($blocks, 'parent_id', 'id');
-        if (!array_key_exists($parentId, $parents)) {
-            throw new InvalidRelationException("Parent block '{$parentId}' not found on the page.");
-        }
-
-        for ($current = $parentId; $current !== null; $current = $parents[$current] ?? null) {
-            if ($current === $blockId) {
-                throw new InvalidRelationException("Block '{$blockId}' cannot be nested inside itself.");
-            }
-        }
     }
 
     protected function saveBlocks(Page $page, array $blocks): void

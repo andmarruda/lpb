@@ -249,6 +249,7 @@ class BlockIntegrationTest extends TestCase
 
         $this->assertFalse($this->repository->reorder($page['id'], [$a['id'], $a['id']]));
         $this->assertFalse($this->repository->reorder($page['id'], [$b['id'], $foreign['id']]));
+        $this->assertFalse($this->repository->reorder('000000000000000000000000', []));
         $this->assertSame(['c', 'a', 'b'], array_column($this->repository->getForPage($page['id']), 'type'));
     }
 

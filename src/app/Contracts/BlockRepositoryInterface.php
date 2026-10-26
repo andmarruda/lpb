@@ -51,7 +51,7 @@ interface BlockRepositoryInterface extends RepositoryInterface
      *
      * @param string|int $pageId
      * @param array $orderedBlockIds
-     * @return bool False, with nothing changed, if an id repeats or is not a block of the page
+     * @return bool False, with nothing changed, if the page is missing or an id repeats or is not a block of the page
      */
     public function reorder(string|int $pageId, array $orderedBlockIds): bool;
 }
