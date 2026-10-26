@@ -3,6 +3,7 @@
 namespace Andmarruda\Lpb\Tests\Feature\Mongo;
 
 use Tests\TestCase;
+use Andmarruda\Lpb\Tests\Feature\Concerns\ComparesStoredArrays;
 use Andmarruda\Lpb\Contracts\BlockRepositoryInterface;
 use Andmarruda\Lpb\Exceptions\InvalidRelationException;
 use Andmarruda\Lpb\Exceptions\InvalidValueException;
@@ -15,6 +16,8 @@ use Andmarruda\Lpb\Models\Mongo\Page;
  */
 class BlockIntegrationTest extends TestCase
 {
+    use ComparesStoredArrays;
+
     protected BlockRepository $repository;
     protected PageRepository $pages;
 
@@ -190,12 +193,12 @@ class BlockIntegrationTest extends TestCase
 
         $this->assertSame($block['id'], $instance['block_id']);
         $this->assertSame('App\\Widgets\\Hero', $instance['widget']);
-        $this->assertSame($config, $instance['config']);
+        $this->assertSameIgnoringKeyOrder($config, $instance['config']);
         $this->assertSame(1, $instance['order']);
 
         $updated = $this->repository->updateWidgetInstance($block['id'], $instance['id'], ['title' => 'Hi']);
-        $this->assertSame(['title' => 'Hi'], $updated['config']);
-        $this->assertSame(['title' => 'Hi'], $this->repository->find($block['id'])['widget_instances'][0]['config']);
+        $this->assertSameIgnoringKeyOrder(['title' => 'Hi'], $updated['config']);
+        $this->assertSameIgnoringKeyOrder(['title' => 'Hi'], $this->repository->find($block['id'])['widget_instances'][0]['config']);
 
         $this->assertTrue($this->repository->removeWidgetInstance($block['id'], $instance['id']));
         $this->assertSame([], $this->repository->find($block['id'])['widget_instances']);
@@ -283,7 +286,7 @@ class BlockIntegrationTest extends TestCase
         $result = $this->pages->withBlocks($page['id']);
 
         $this->assertSame([$block['id']], array_column($result['blocks'], 'id'));
-        $this->assertSame(['title' => 'Welcome'], $result['blocks'][0]['widget_instances'][0]['config']);
+        $this->assertSameIgnoringKeyOrder(['title' => 'Welcome'], $result['blocks'][0]['widget_instances'][0]['config']);
     }
 
     /**

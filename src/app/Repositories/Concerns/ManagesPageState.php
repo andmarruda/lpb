@@ -2,6 +2,7 @@
 
 namespace Andmarruda\Lpb\Repositories\Concerns;
 
+use Andmarruda\Lpb\Contracts\PageRepositoryInterface;
 use Andmarruda\Lpb\Contracts\RevisionRepositoryInterface;
 use Andmarruda\Lpb\Exceptions\InvalidStateTransitionException;
 use Andmarruda\Lpb\ValueObjects\PublishState;
@@ -17,11 +18,6 @@ use Illuminate\Database\Eloquent\Model;
  */
 trait ManagesPageState
 {
-    /**
-     * Revision type used for pages.
-     */
-    public const REVISION_TYPE = 'page';
-
     /**
      * Move a page to another publish state and record a revision.
      *
@@ -127,7 +123,7 @@ trait ManagesPageState
         $page->status = $state;
         $page->save();
 
-        $this->revisions->record(self::REVISION_TYPE, $page->getKey(), $this->snapshot($page->getKey()), $state, $createdBy);
+        $this->revisions->record(PageRepositoryInterface::REVISION_TYPE, $page->getKey(), $this->snapshot($page->getKey()), $state, $createdBy);
     }
 
     /**

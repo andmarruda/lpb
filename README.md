@@ -98,46 +98,37 @@ $page = $pages->withBlocks($pageId);
 
 ## Testing
 
-### Unit Tests (No Database Required)
+### Unit Tests
 
-```bash
-composer test:unit
-```
-
-### Feature Tests (Requires Database)
+Value objects, casts and repositories with mocked models; no database or
+Laravel application needed:
 
 ```bash
 composer test
 ```
 
-### Docker Integration Tests
+### Integration Tests (Docker)
 
-Test complete integration with fresh Laravel installation:
+Each script installs the package into a fresh Laravel application and runs
+the unit and feature suites against a real database:
 
-**SQL Test (SQLite):**
 ```bash
-./test-sql.sh
+composer test:sqlite   # shell/test-sql.sh   - SQLite
+composer test:mysql    # shell/test-mysql.sh - MySQL 8.4
+composer test:mongo    # shell/test-mongo.sh - MongoDB 7 with lpb:install-mongo applied
+composer test:all      # all three
 ```
 
-**MongoDB Test:**
-```bash
-./test-mongo.sh
-```
+The feature suites include a shared acceptance scenario
+(`tests/Feature/Concerns/AcceptanceScenario.php`) that runs the same page
+lifecycle on every driver through the repository contracts: template,
+draft page, nested blocks with widget instances, SEO and metatags, publish
+with a revision, loading by slug with all relations, unpublish, and
+restoring the first revision.
 
-See [DOCKER_TESTS.md](DOCKER_TESTS.md) for detailed documentation.
-
-## Test Coverage
-
-- **Unit Tests**: 55 tests (Mockery-based, no DB)
-  - BaseRepositoryTest: 12 tests
-  - Sql/PageRepositoryTest: 18 tests
-  - Mongo/PageRepositoryTest: 25 tests
-
-- **Feature Tests**: 16 tests (Real DB integration)
-  - SQL Integration: 7 tests
-  - MongoDB Integration: 9 tests
-
-**Total**: 71 tests, 90%+ coverage
+MySQL `JSON` columns and MongoDB documents may return object keys (widget
+config, media meta, revision payloads) in a different order than they were
+written; values and list order are preserved.
 
 ## Performance
 

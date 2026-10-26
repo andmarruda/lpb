@@ -31,9 +31,13 @@
         }
     },
     "scripts": {
-        "test": "vendor/bin/phpunit",
-        "test:unit": "vendor/bin/phpunit --testsuite=Unit",
-        "test:coverage": "vendor/bin/phpunit --coverage-html coverage"
+        "test": "vendor/bin/phpunit -c phpunit.sql.xml --testsuite=Unit",
+        "test:unit": "vendor/bin/phpunit -c phpunit.sql.xml --testsuite=Unit",
+        "test:coverage": "vendor/bin/phpunit -c phpunit.sql.xml --testsuite=Unit --coverage-html coverage",
+        "test:sqlite": "shell/test-sql.sh",
+        "test:mysql": "shell/test-mysql.sh",
+        "test:mongo": "shell/test-mongo.sh",
+        "test:all": "shell/test-all.sh"
     },
     "extra": {
         "laravel": {

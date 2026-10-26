@@ -48,6 +48,17 @@ class PageRepository extends BaseRepository implements PageRepositoryInterface
     }
 
     /**
+     * Find a page by its slug with its template, blocks, widget instances and metatags.
+     *
+     * @param string $slug The page slug
+     * @return array|null The page with relations as array or null if not found
+     */
+    public function findBySlugWithRelations(string $slug): ?array
+    {
+        return $this->model->with(['template', 'blocks.widgetInstances', 'metatags'])->bySlug($slug)->first()?->toArray();
+    }
+
+    /**
      * Retrieve all published pages.
      *
      * @return array Collection of published pages as array

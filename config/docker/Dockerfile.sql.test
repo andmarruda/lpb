@@ -43,4 +43,8 @@ RUN rm -rf tests/Unit tests/Feature && \
     cp -r /app/lpb-package/tests . && \
     cp /app/lpb-package/phpunit.sql.xml phpunit.xml
 
+# Autoload the package test namespace so shared test traits resolve
+RUN php -r '$f = "composer.json"; $j = json_decode(file_get_contents($f), true); $j["autoload-dev"]["psr-4"]["Andmarruda\\Lpb\\Tests\\"] = "tests/"; file_put_contents($f, json_encode($j, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));' && \
+    composer dump-autoload --no-interaction
+
 CMD ["php", "artisan", "test"]

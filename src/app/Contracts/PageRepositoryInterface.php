@@ -10,7 +10,22 @@ use Andmarruda\Lpb\ValueObjects\SEO;
  */
 interface PageRepositoryInterface extends RepositoryInterface
 {
+    /**
+     * revisionable_type of page revisions.
+     */
+    public const REVISION_TYPE = 'page';
+
     public function findBySlug(string $slug): ?array;
+
+    /**
+     * A page by slug with template (or null), blocks with their widget
+     * instances, metatags and SEO: everything needed to render it.
+     *
+     * @param string $slug
+     * @return array|null
+     */
+    public function findBySlugWithRelations(string $slug): ?array;
+
     public function getPublished(): array;
     public function withBlocks(string|int $id): ?array;
     public function withMetatags(string|int $id): ?array;

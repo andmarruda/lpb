@@ -4,6 +4,7 @@ namespace Andmarruda\Lpb\Repositories\Mongo;
 
 use Andmarruda\Lpb\Models\Mongo\Page;
 use Andmarruda\Lpb\Models\Mongo\Revision;
+use Andmarruda\Lpb\Models\Mongo\Template;
 use Andmarruda\Lpb\Repositories\BaseRepository;
 use Andmarruda\Lpb\Repositories\Concerns\ManagesPageState;
 use Andmarruda\Lpb\ValueObjects\PublishState;
@@ -48,6 +49,27 @@ class PageRepository extends BaseRepository implements PageRepositoryInterface
     }
 
     /**
+     * Find a page by its slug with its template, blocks, widget instances and metatags.
+     *
+     * Blocks and metatags are embedded; the template is read from its own collection.
+     *
+     * @param string $slug The page slug
+     * @return array|null The page with relations as array or null if not found
+     */
+    public function findBySlugWithRelations(string $slug): ?array
+    {
+        $page = $this->model->bySlug($slug)->first();
+        if (!$page) {
+            return null;
+        }
+
+        $data = $this->withPresentedBlocks($page->toArray());
+        $data['metatags'] ??= [];
+        $data['template'] = $page->template_id ? Template::find($page->template_id)?->toArray() : null;
+        return $data;
+    }
+
+    /**
      * Retrieve all published pages.
      *
      * @return array Collection of published pages as array
@@ -69,13 +91,7 @@ class PageRepository extends BaseRepository implements PageRepositoryInterface
     public function withBlocks(string|int $id): ?array
     {
         $page = $this->model->find($id);
-        if (!$page) {
-            return null;
-        }
-
-        $data = $page->toArray();
-        $data['blocks'] = EmbeddedBlocks::presentAll((string) ($data['id'] ?? $data['_id']), $data['blocks'] ?? []);
-        return $data;
+        return $page ? $this->withPresentedBlocks($page->toArray()) : null;
     }
 
     /**
@@ -157,5 +173,17 @@ class PageRepository extends BaseRepository implements PageRepositoryInterface
     protected function atomically(callable $callback): void
     {
         $callback();
+    }
+
+    /**
+     * Replace raw embedded blocks with blocks shaped like the SQL output.
+     *
+     * @param array $data Page as array
+     * @return array
+     */
+    protected function withPresentedBlocks(array $data): array
+    {
+        $data['blocks'] = EmbeddedBlocks::presentAll((string) ($data['id'] ?? $data['_id']), $data['blocks'] ?? []);
+        return $data;
     }
 }

@@ -3,6 +3,7 @@
 namespace Andmarruda\Lpb\Tests\Feature\Mongo;
 
 use Tests\TestCase;
+use Andmarruda\Lpb\Tests\Feature\Concerns\ComparesStoredArrays;
 use Andmarruda\Lpb\Contracts\MediaRepositoryInterface;
 use Andmarruda\Lpb\Repositories\Mongo\MediaRepository;
 use Andmarruda\Lpb\Models\Mongo\Media;
@@ -13,6 +14,8 @@ use Andmarruda\Lpb\Exceptions\InvalidValueException;
  */
 class MediaIntegrationTest extends TestCase
 {
+    use ComparesStoredArrays;
+
     protected MediaRepository $repository;
 
     protected function setUp(): void
@@ -62,7 +65,7 @@ class MediaIntegrationTest extends TestCase
         $this->assertSame('image/png', $media['mime_type']);
         $found = $this->repository->findByPath('public', 'images/hero.png');
         $this->assertSame($media['id'], $found['id']);
-        $this->assertSame($meta, $found['meta']);
+        $this->assertSameIgnoringKeyOrder($meta, $found['meta']);
         $this->assertSame(2048, $found['size']);
         $this->assertNull($this->repository->findByPath('s3', 'images/hero.png'));
     }
@@ -103,7 +106,7 @@ class MediaIntegrationTest extends TestCase
         $updated = $this->repository->update($media['id'], ['collection' => 'gallery', 'meta' => ['alt' => 'New'], 'unknown' => 'x']);
 
         $this->assertSame('gallery', $updated['collection']);
-        $this->assertSame(['alt' => 'New'], $updated['meta']);
+        $this->assertSameIgnoringKeyOrder(['alt' => 'New'], $updated['meta']);
         $this->assertArrayNotHasKey('unknown', $updated);
     }
 

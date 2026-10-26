@@ -1,0 +1,4 @@
+# The SQL test application with the MySQL driver; run through shell/test-mysql.sh
+FROM lpb-sql-test
+
+RUN docker-php-ext-install pdo_mysql
