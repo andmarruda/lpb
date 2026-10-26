@@ -12,6 +12,7 @@
         <testsuite name="Unit">
             <directory>tests/Unit/Repositories/Mongo</directory>
             <file>tests/Unit/BaseRepositoryTest.php</file>
+            <directory>tests/Unit/ValueObjects</directory>
         </testsuite>
         <testsuite name="Feature">
             <directory>tests/Feature/Mongo</directory>

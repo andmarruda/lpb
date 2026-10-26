@@ -2,6 +2,9 @@
 namespace Andmarruda\Lpb\Models\Mongo;
 
 use MongoDB\Laravel\Eloquent\Model;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Andmarruda\Lpb\ValueObjects\PublishState;
+use Andmarruda\Lpb\ValueObjects\Slug;
 
 class Page extends Model
 {
@@ -21,9 +24,20 @@ class Page extends Model
 
     protected $casts = [
         'theme' => 'boolean',
+        'status' => PublishState::class,
         'metatags' => 'array',
         'widgets' => 'array',
     ];
+
+    /**
+     * Validate the slug through the Slug value object on write
+     *
+     * @return Attribute
+     */
+    protected function slug(): Attribute
+    {
+        return Attribute::set(fn (Slug|string $value) => Slug::from((string) $value)->value());
+    }
 
     /**
      * Published scope
@@ -32,7 +46,7 @@ class Page extends Model
      */
     public function scopePublished($query)
     {
-        return $query->where('status', 'published');
+        return $query->where('status', PublishState::Published->value);
     }
 
     /**
@@ -52,7 +66,7 @@ class Page extends Model
      */
     public function scopeDraft($query)
     {
-        return $query->where('status', 'draft');
+        return $query->where('status', PublishState::Draft->value);
     }
 
     /**

@@ -4,6 +4,7 @@ namespace Andmarruda\Lpb\Repositories\Mongo;
 
 use Andmarruda\Lpb\Models\Mongo\Page;
 use Andmarruda\Lpb\Repositories\BaseRepository;
+use Andmarruda\Lpb\ValueObjects\PublishState;
 use Andmarruda\Lpb\Contracts\PageRepositoryInterface;
 use Andmarruda\Lpb\Contracts\PageContentRepositoryInterface;
 
@@ -81,11 +82,12 @@ class PageRepository extends BaseRepository implements PageRepositoryInterface, 
     /**
      * Retrieve pages by status.
      *
-     * @param string $status The page status (published, draft, archived)
+     * @param PublishState|string $status The page status (published, draft, archived)
      * @return array Collection of pages with the given status
      */
-    public function getByStatus(string $status): array
+    public function getByStatus(PublishState|string $status): array
     {
+        $status = $status instanceof PublishState ? $status->value : $status;
         return $this->model->where('status', $status)->get()->toArray();
     }
 
