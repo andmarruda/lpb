@@ -1,4 +1,4 @@
-FROM php:8.2-cli
+FROM php:8.2-cli-bookworm
 
 WORKDIR /app
 
@@ -23,11 +23,11 @@ ENV COMPOSER_ALLOW_SUPERUSER=1
 
 RUN mkdir -p /data/db
 
-RUN composer create-project laravel/laravel laravel-test "^10.0" --prefer-dist --no-interaction
+RUN composer create-project laravel/laravel laravel-test --prefer-dist --no-interaction
 
 WORKDIR /app/laravel-test
 
-RUN composer require mongodb/laravel-mongodb:^4.0 --no-interaction --ignore-platform-req=ext-mongodb
+RUN composer require mongodb/laravel-mongodb --no-interaction
 
 COPY . /app/lpb-package
 

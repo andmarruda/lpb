@@ -28,13 +28,6 @@
         </exclude>
     </source>
 
-    <coverage>
-        <report>
-            <html outputDirectory="coverage"/>
-            <text outputFile="php://stdout" showUncoveredFiles="false"/>
-        </report>
-    </coverage>
-
     <php>
         <env name="APP_ENV" value="testing"/>
         <env name="LPB_DATABASE_DRIVER" value="mongodb"/>

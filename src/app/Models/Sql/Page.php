@@ -34,7 +34,7 @@ class Page extends Model
      */
     public function widgets(): HasMany
     {
-        return $this->hasMany(PageWidget::class, 'page_id', 'id')->orderBy('order');
+        return $this->hasMany(PageWidget::class, 'lpb_page_id', 'id')->orderBy('order');
     }
 
     /**
@@ -44,7 +44,7 @@ class Page extends Model
      */
     public function metatags(): HasMany
     {
-        return $this->hasMany(PageMetatag::class, 'page_id', 'id');
+        return $this->hasMany(Metatag::class, 'lpb_page_id', 'id');
     }
 
     /**

@@ -42,9 +42,10 @@ return new class extends Migration {
                 $table->unique(['lpb_page_id', 'name'], 'uq_page_name');
                 $table->unique(['lpb_page_id', 'property'], 'uq_page_property');
                 $table->index(['lpb_page_id'], 'idx_metatags_page');
-
-                $table->check("((name IS NOT NULL) <> (property IS NOT NULL))", 'chk_metatags_name_xor_property');
             });
+
+            // Blueprint has no CHECK constraint API, so add it with raw SQL
+            DB::statement('ALTER TABLE lpb_metatags ADD CONSTRAINT chk_metatags_name_xor_property CHECK ((name IS NOT NULL) <> (property IS NOT NULL))');
         }
     }
 

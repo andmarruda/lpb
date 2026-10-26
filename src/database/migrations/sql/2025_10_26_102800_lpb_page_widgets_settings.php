@@ -23,6 +23,6 @@ return new class extends Migration {
     }
 
     public function down(): void {
-        Schema::dropIfExists('lpb_page_widgets_settings');
+        Schema::dropIfExists('lpb_page_widget_settings');
     }
 };

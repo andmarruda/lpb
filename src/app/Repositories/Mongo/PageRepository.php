@@ -5,6 +5,7 @@ namespace Andmarruda\Lpb\Repositories\Mongo;
 use Andmarruda\Lpb\Models\Mongo\Page;
 use Andmarruda\Lpb\Repositories\BaseRepository;
 use Andmarruda\Lpb\Contracts\PageRepositoryInterface;
+use Andmarruda\Lpb\Contracts\PageContentRepositoryInterface;
 
 /**
  * MongoDB implementation of the Page repository.
@@ -13,7 +14,7 @@ use Andmarruda\Lpb\Contracts\PageRepositoryInterface;
  * It extends BaseRepository for common CRUD operations. Unlike SQL, widgets and
  * metatags are already embedded in the page document, so no eager loading is needed.
  */
-class PageRepository extends BaseRepository implements PageRepositoryInterface
+class PageRepository extends BaseRepository implements PageRepositoryInterface, PageContentRepositoryInterface
 {
     /**
      * Create a new MongoDB page repository instance.
@@ -109,15 +110,15 @@ class PageRepository extends BaseRepository implements PageRepositoryInterface
      * Update a widget in an existing page.
      *
      * @param string|int $pageId The page identifier
-     * @param int $widgetIndex The widget array index
+     * @param int $widgetKey The widget array index
      * @param array $data The widget data to update
      * @return array|null The updated page as array or null if not found
      */
-    public function updateWidget(string|int $pageId, int $widgetIndex, array $data): ?array
+    public function updateWidget(string|int $pageId, int $widgetKey, array $data): ?array
     {
         $page = $this->model->find($pageId);
         if ($page) {
-            $page->updateWidget($widgetIndex, $data);
+            $page->updateWidget($widgetKey, $data);
             return $page->fresh()->toArray();
         }
         return null;
@@ -127,14 +128,14 @@ class PageRepository extends BaseRepository implements PageRepositoryInterface
      * Remove a widget from an existing page.
      *
      * @param string|int $pageId The page identifier
-     * @param int $widgetIndex The widget array index
+     * @param int $widgetKey The widget array index
      * @return array|null The updated page as array or null if not found
      */
-    public function removeWidget(string|int $pageId, int $widgetIndex): ?array
+    public function removeWidget(string|int $pageId, int $widgetKey): ?array
     {
         $page = $this->model->find($pageId);
         if ($page) {
-            $page->removeWidget($widgetIndex);
+            $page->removeWidget($widgetKey);
             return $page->fresh()->toArray();
         }
         return null;

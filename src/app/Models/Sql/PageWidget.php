@@ -12,7 +12,8 @@ class PageWidget extends Model
     protected $fillable = [
         'position_x',
         'position_y',
-        'child_id',
+        'parent_id',
+        'order',
         'widget',
         'lpb_page_id',
     ];
@@ -20,6 +21,7 @@ class PageWidget extends Model
     protected $casts = [
         'position_x' => 'integer',
         'position_y' => 'integer',
+        'order' => 'integer',
     ];
 
     /**
@@ -39,7 +41,7 @@ class PageWidget extends Model
      */
     public function parent(): BelongsTo
     {
-        return $this->belongsTo(PageWidget::class, 'child_id');
+        return $this->belongsTo(PageWidget::class, 'parent_id');
     }
 
     /**
@@ -49,7 +51,7 @@ class PageWidget extends Model
      */
     public function children(): HasMany
     {
-        return $this->hasMany(PageWidget::class, 'child_id');
+        return $this->hasMany(PageWidget::class, 'parent_id');
     }
 
     /**

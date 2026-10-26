@@ -3,6 +3,8 @@
 namespace Andmarruda\Lpb\Tests\Feature\Mongo;
 
 use Tests\TestCase;
+use Andmarruda\Lpb\Contracts\PageContentRepositoryInterface;
+use Andmarruda\Lpb\Contracts\PageRepositoryInterface;
 use Andmarruda\Lpb\Repositories\Mongo\PageRepository;
 use Andmarruda\Lpb\Models\Mongo\Page;
 
@@ -54,7 +56,7 @@ class PageIntegrationTest extends TestCase
         $result = $this->repository->create($data);
 
         $this->assertIsArray($result);
-        $this->assertArrayHasKey('_id', $result);
+        $this->assertArrayHasKey('id', $result);
         $this->assertEquals('Test Page MongoDB', $result['title']);
         $this->assertEquals('test-page-mongo', $result['slug']);
     }
@@ -129,7 +131,7 @@ class PageIntegrationTest extends TestCase
             ]
         ];
 
-        $result = $this->repository->addWidget($page['_id'], $widget);
+        $result = $this->repository->addWidget($page['id'], $widget);
 
         $this->assertNotNull($result);
         $this->assertArrayHasKey('widgets', $result);
@@ -152,7 +154,7 @@ class PageIntegrationTest extends TestCase
             'metatags' => []
         ]);
 
-        $result = $this->repository->updateWidget($page['_id'], 0, [
+        $result = $this->repository->updateWidget($page['id'], 0, [
             'position_x' => 1,
             'position_y' => 2
         ]);
@@ -176,7 +178,7 @@ class PageIntegrationTest extends TestCase
             'metatags' => []
         ]);
 
-        $result = $this->repository->removeWidget($page['_id'], 0);
+        $result = $this->repository->removeWidget($page['id'], 0);
 
         $this->assertNotNull($result);
         $this->assertArrayHasKey('widgets', $result);
@@ -196,7 +198,7 @@ class PageIntegrationTest extends TestCase
         ]);
 
         $result = $this->repository->setMetatag(
-            $page['_id'],
+            $page['id'],
             'description',
             'Test description for page'
         );
@@ -220,7 +222,7 @@ class PageIntegrationTest extends TestCase
             ]
         ]);
 
-        $result = $this->repository->getMetatag($page['_id'], 'keywords');
+        $result = $this->repository->getMetatag($page['id'], 'keywords');
 
         $this->assertEquals('laravel, mongodb, test', $result);
     }
@@ -238,11 +240,20 @@ class PageIntegrationTest extends TestCase
             'metatags' => []
         ]);
 
-        $result = $this->repository->delete($page['_id']);
+        $result = $this->repository->delete($page['id']);
 
         $this->assertTrue($result);
 
-        $found = $this->repository->find($page['_id']);
+        $found = $this->repository->find($page['id']);
         $this->assertNull($found);
+    }
+
+    /**
+     * Test the container binds the MongoDB repository for both page contracts
+     */
+    public function test_container_binds_mongo_repositories(): void
+    {
+        $this->assertInstanceOf(PageRepository::class, app(PageRepositoryInterface::class));
+        $this->assertInstanceOf(PageRepository::class, app(PageContentRepositoryInterface::class));
     }
 }

@@ -2,12 +2,23 @@
 namespace Andmarruda\Lpb\Providers;
 
 use Illuminate\Support\ServiceProvider;
-use Andmarruda\Lpb\Repositories\EloquentRepository;
-use Andmarruda\Lpb\Repositories\MongoRepository;
-use Andmarruda\Lpb\Contracts\RepositoryInterface;
+use Andmarruda\Lpb\Contracts\PageRepositoryInterface;
+use Andmarruda\Lpb\Contracts\PageContentRepositoryInterface;
+use Andmarruda\Lpb\Repositories\Sql;
+use Andmarruda\Lpb\Repositories\Mongo;
 
 class DatabaseAbstractionServiceProvider extends ServiceProvider
 {
+    /**
+     * Repository contracts mapped to their [SQL, MongoDB] implementations.
+     *
+     * @var array<class-string, array{class-string, class-string}>
+     */
+    protected array $repositories = [
+        PageRepositoryInterface::class        => [Sql\PageRepository::class, Mongo\PageRepository::class],
+        PageContentRepositoryInterface::class => [Sql\PageRepository::class, Mongo\PageRepository::class],
+    ];
+
     public function register(): void
     {
         $this->mergeConfigFrom(
@@ -15,18 +26,11 @@ class DatabaseAbstractionServiceProvider extends ServiceProvider
             'laravel-page-builder'
         );
 
-        $this->app->bind(RepositoryInterface::class, function ($app) {
-            $driver = config('laravel-page-builder.database_driver', 'eloquent');
+        $useMongo = $this->usesMongo();
 
-            $modelClass = $this->resolveModelClass($driver);
-            $model = $app->make($modelClass);
-
-            return match ($driver) {
-                'mongo' => new MongoRepository($model),
-                'eloquent' => new EloquentRepository($model),
-                default => new EloquentRepository($model),
-            };
-        });
+        foreach ($this->repositories as $contract => [$sqlImplementation, $mongoImplementation]) {
+            $this->app->bind($contract, $useMongo ? $mongoImplementation : $sqlImplementation);
+        }
     }
 
     public function boot(): void
@@ -49,8 +53,13 @@ class DatabaseAbstractionServiceProvider extends ServiceProvider
         }
     }
 
-    protected function resolveModelClass(): string
+    /**
+     * Whether the configured driver is MongoDB ('mongodb', or the 'mongo' alias).
+     *
+     * @return bool
+     */
+    protected function usesMongo(): bool
     {
-        return config('laravel-page-builder.default_model', \App\Models\Page::class);
+        return in_array(config('laravel-page-builder.database_driver', 'sql'), ['mongodb', 'mongo'], true);
     }
 }

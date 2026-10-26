@@ -41,7 +41,7 @@ LPB_SQL_CONNECTION=mysql
 ### MongoDB Driver
 
 ```bash
-composer require mongodb/laravel-mongodb:^4.0
+composer require mongodb/laravel-mongodb:^5.0
 php artisan vendor:publish --tag=lpb-migrations-mongodb
 php artisan migrate
 ```
