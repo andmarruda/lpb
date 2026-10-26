@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Andmarruda\Lpb\ValueObjects\PublishState;
+use Andmarruda\Lpb\Casts\SeoCast;
 use Andmarruda\Lpb\ValueObjects\Slug;
 
 class Page extends Model
@@ -23,12 +24,18 @@ class Page extends Model
         'slug',
         'status',
         'template_id',
+        'seo',
+    ];
+
+    protected $attributes = [
+        'status' => 'draft',
     ];
 
     protected $casts = [
         'status' => PublishState::class,
         'extra_css' => 'string',
         'extra_js' => 'string',
+        'seo' => SeoCast::class,
     ];
 
     /**

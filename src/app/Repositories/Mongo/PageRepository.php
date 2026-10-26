@@ -3,9 +3,12 @@
 namespace Andmarruda\Lpb\Repositories\Mongo;
 
 use Andmarruda\Lpb\Models\Mongo\Page;
+use Andmarruda\Lpb\Models\Mongo\Revision;
 use Andmarruda\Lpb\Repositories\BaseRepository;
+use Andmarruda\Lpb\Repositories\Concerns\ManagesPageState;
 use Andmarruda\Lpb\ValueObjects\PublishState;
 use Andmarruda\Lpb\Contracts\PageRepositoryInterface;
+use Andmarruda\Lpb\Contracts\RevisionRepositoryInterface;
 
 /**
  * MongoDB implementation of the Page repository.
@@ -16,14 +19,20 @@ use Andmarruda\Lpb\Contracts\PageRepositoryInterface;
  */
 class PageRepository extends BaseRepository implements PageRepositoryInterface
 {
+    use ManagesPageState;
+
+    protected RevisionRepositoryInterface $revisions;
+
     /**
      * Create a new MongoDB page repository instance.
      *
      * @param Page $model The MongoDB Page model instance
+     * @param RevisionRepository|null $revisions Defaults to the MongoDB revision repository
      */
-    public function __construct(Page $model)
+    public function __construct(Page $model, ?RevisionRepository $revisions = null)
     {
         parent::__construct($model);
+        $this->revisions = $revisions ?? new RevisionRepository(new Revision());
     }
 
     /**
@@ -125,5 +134,28 @@ class PageRepository extends BaseRepository implements PageRepositoryInterface
     {
         $page = $this->model->find($pageId);
         return $page?->getMetatag($name);
+    }
+
+    /**
+     * Page document with blocks shaped like the SQL output; metatags are embedded.
+     *
+     * @param string|int $id
+     * @return array
+     */
+    protected function snapshot(string|int $id): array
+    {
+        return $this->withBlocks($id);
+    }
+
+    /**
+     * Run writes directly: standalone MongoDB servers have no transactions,
+     * so update() validates a transition before writing anything.
+     *
+     * @param callable $callback
+     * @return void
+     */
+    protected function atomically(callable $callback): void
+    {
+        $callback();
     }
 }

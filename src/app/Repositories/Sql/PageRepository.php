@@ -3,9 +3,12 @@
 namespace Andmarruda\Lpb\Repositories\Sql;
 
 use Andmarruda\Lpb\Models\Sql\Page;
+use Andmarruda\Lpb\Models\Sql\Revision;
 use Andmarruda\Lpb\Repositories\BaseRepository;
+use Andmarruda\Lpb\Repositories\Concerns\ManagesPageState;
 use Andmarruda\Lpb\ValueObjects\PublishState;
 use Andmarruda\Lpb\Contracts\PageRepositoryInterface;
+use Andmarruda\Lpb\Contracts\RevisionRepositoryInterface;
 
 /**
  * SQL implementation of the Page repository.
@@ -16,14 +19,20 @@ use Andmarruda\Lpb\Contracts\PageRepositoryInterface;
  */
 class PageRepository extends BaseRepository implements PageRepositoryInterface
 {
+    use ManagesPageState;
+
+    protected RevisionRepositoryInterface $revisions;
+
     /**
      * Create a new SQL page repository instance.
      *
      * @param Page $model The SQL Page model instance
+     * @param RevisionRepository|null $revisions Defaults to the SQL revision repository
      */
-    public function __construct(Page $model)
+    public function __construct(Page $model, ?RevisionRepository $revisions = null)
     {
         parent::__construct($model);
+        $this->revisions = $revisions ?? new RevisionRepository(new Revision());
     }
 
     /**
@@ -125,5 +134,27 @@ class PageRepository extends BaseRepository implements PageRepositoryInterface
     protected function withContent(Page $page): array
     {
         return $page->fresh(['metatags'])->toArray();
+    }
+
+    /**
+     * Page with blocks, widget instances and metatags.
+     *
+     * @param string|int $id
+     * @return array
+     */
+    protected function snapshot(string|int $id): array
+    {
+        return $this->model->with(['blocks.widgetInstances', 'metatags'])->find($id)->toArray();
+    }
+
+    /**
+     * Run writes in a database transaction.
+     *
+     * @param callable $callback
+     * @return void
+     */
+    protected function atomically(callable $callback): void
+    {
+        $this->model->getConnection()->transaction($callback);
     }
 }

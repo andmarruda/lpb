@@ -4,6 +4,7 @@ namespace Andmarruda\Lpb\Models\Mongo;
 use MongoDB\Laravel\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Andmarruda\Lpb\ValueObjects\PublishState;
+use Andmarruda\Lpb\Casts\SeoCast;
 use Andmarruda\Lpb\ValueObjects\Slug;
 
 class Page extends Model
@@ -21,12 +22,18 @@ class Page extends Model
         'template_slug',
         'metatags',
         'blocks',
+        'seo',
+    ];
+
+    protected $attributes = [
+        'status' => 'draft',
     ];
 
     // metatags and blocks have no cast: an "array" cast would store them as
     // JSON strings instead of embedded documents.
     protected $casts = [
         'status' => PublishState::class,
+        'seo' => SeoCast::class . ':document',
     ];
 
     /**

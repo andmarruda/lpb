@@ -5,6 +5,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Andmarruda\Lpb\Casts\SeoCast;
 use Andmarruda\Lpb\ValueObjects\Slug;
 use Andmarruda\Lpb\ValueObjects\TemplateStatus;
 
@@ -21,6 +22,7 @@ class Template extends Model
         'view_path',
         'is_default',
         'status',
+        'seo',
     ];
 
     protected $attributes = [
@@ -31,6 +33,7 @@ class Template extends Model
     protected $casts = [
         'is_default' => 'boolean',
         'status' => TemplateStatus::class,
+        'seo' => SeoCast::class,
     ];
 
     /**

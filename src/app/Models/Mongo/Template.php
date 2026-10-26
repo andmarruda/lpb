@@ -3,6 +3,7 @@ namespace Andmarruda\Lpb\Models\Mongo;
 
 use MongoDB\Laravel\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Andmarruda\Lpb\Casts\SeoCast;
 use Andmarruda\Lpb\ValueObjects\Slug;
 use Andmarruda\Lpb\ValueObjects\TemplateStatus;
 
@@ -18,6 +19,7 @@ class Template extends Model
         'view_path',
         'is_default',
         'status',
+        'seo',
     ];
 
     protected $attributes = [
@@ -28,6 +30,7 @@ class Template extends Model
     protected $casts = [
         'is_default' => 'boolean',
         'status' => TemplateStatus::class,
+        'seo' => SeoCast::class . ':document',
     ];
 
     /**

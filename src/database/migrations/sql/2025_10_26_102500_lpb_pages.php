@@ -14,6 +14,7 @@ return new class extends Migration {
             $table->string('slug')->unique('uq_pages_slug');
             $table->enum('status', ['draft','published','archived'])->default('draft');
             $table->uuid('template_id')->nullable();
+            $table->json('seo')->nullable();
             $table->timestamps();
 
             $table->foreign('template_id', 'fk_pages_template')

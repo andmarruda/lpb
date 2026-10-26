@@ -13,6 +13,7 @@
             <directory>tests/Unit/Repositories/Sql</directory>
             <file>tests/Unit/BaseRepositoryTest.php</file>
             <directory>tests/Unit/ValueObjects</directory>
+            <directory>tests/Unit/Casts</directory>
         </testsuite>
         <testsuite name="Feature">
             <directory>tests/Feature/Sql</directory>
