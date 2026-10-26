@@ -4,6 +4,7 @@ namespace Andmarruda\Lpb\Models\Sql;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Andmarruda\Lpb\ValueObjects\PublishState;
@@ -21,11 +22,10 @@ class Page extends Model
         'extra_js',
         'slug',
         'status',
-        'theme',
+        'template_id',
     ];
 
     protected $casts = [
-        'theme' => 'boolean',
         'status' => PublishState::class,
         'extra_css' => 'string',
         'extra_js' => 'string',
@@ -39,6 +39,16 @@ class Page extends Model
     protected function slug(): Attribute
     {
         return Attribute::set(fn (Slug|string $value) => Slug::from((string) $value)->value());
+    }
+
+    /**
+     * Template relationship
+     *
+     * @return BelongsTo
+     */
+    public function template(): BelongsTo
+    {
+        return $this->belongsTo(Template::class, 'template_id', 'id');
     }
 
     /**

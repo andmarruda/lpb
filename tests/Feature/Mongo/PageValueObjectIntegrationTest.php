@@ -75,6 +75,7 @@ class PageValueObjectIntegrationTest extends TestCase
 
         $this->assertSame('about-us', $result['slug']);
         $this->assertNotNull($this->repository->findBySlug('about-us'));
+        $this->assertSame('about-us', Page::find($result['id'])->slug);
     }
 
     /**

@@ -48,7 +48,6 @@ class PageIntegrationTest extends TestCase
             'title' => 'Test Page MongoDB',
             'slug' => 'test-page-mongo',
             'status' => 'published',
-            'theme' => true,
             'widgets' => [],
             'metatags' => []
         ];

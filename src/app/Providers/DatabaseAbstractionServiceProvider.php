@@ -4,6 +4,7 @@ namespace Andmarruda\Lpb\Providers;
 use Illuminate\Support\ServiceProvider;
 use Andmarruda\Lpb\Contracts\PageRepositoryInterface;
 use Andmarruda\Lpb\Contracts\PageContentRepositoryInterface;
+use Andmarruda\Lpb\Contracts\TemplateRepositoryInterface;
 use Andmarruda\Lpb\Repositories\Sql;
 use Andmarruda\Lpb\Repositories\Mongo;
 
@@ -17,6 +18,7 @@ class DatabaseAbstractionServiceProvider extends ServiceProvider
     protected array $repositories = [
         PageRepositoryInterface::class        => [Sql\PageRepository::class, Mongo\PageRepository::class],
         PageContentRepositoryInterface::class => [Sql\PageRepository::class, Mongo\PageRepository::class],
+        TemplateRepositoryInterface::class    => [Sql\TemplateRepository::class, Mongo\TemplateRepository::class],
     ];
 
     public function register(): void

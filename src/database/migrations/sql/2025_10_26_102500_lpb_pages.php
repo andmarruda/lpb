@@ -13,8 +13,12 @@ return new class extends Migration {
             $table->text('extra_js')->nullable();
             $table->string('slug')->unique('uq_pages_slug');
             $table->enum('status', ['draft','published','archived'])->default('draft');
-            $table->boolean('theme')->default(false);
+            $table->uuid('template_id')->nullable();
             $table->timestamps();
+
+            $table->foreign('template_id', 'fk_pages_template')
+                  ->references('id')->on('lpb_templates')
+                  ->onDelete('set null');
         });
     }
 

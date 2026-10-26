@@ -36,8 +36,7 @@ class PageIntegrationTest extends TestCase
         $data = [
             'title' => 'Test Page',
             'slug' => 'test-page',
-            'status' => 'published',
-            'theme' => true
+            'status' => 'published'
         ];
 
         $result = $this->repository->create($data);

@@ -17,13 +17,13 @@ class Page extends Model
         'extra_js',
         'slug',
         'status',
-        'theme',
+        'template_id',
+        'template_slug',
         'metatags',
         'widgets',
     ];
 
     protected $casts = [
-        'theme' => 'boolean',
         'status' => PublishState::class,
         'metatags' => 'array',
         'widgets' => 'array',
@@ -32,11 +32,18 @@ class Page extends Model
     /**
      * Validate the slug through the Slug value object on write
      *
+     * The explicit getter is required: without one, laravel-mongodb treats
+     * the slug() method as a relation and $model->slug returns null.
+     * Object caching is disabled so a Slug passed on write reads back as a string.
+     *
      * @return Attribute
      */
     protected function slug(): Attribute
     {
-        return Attribute::set(fn (Slug|string $value) => Slug::from((string) $value)->value());
+        return Attribute::make(
+            get: fn (?string $value) => $value,
+            set: fn (Slug|string $value) => Slug::from((string) $value)->value(),
+        )->withoutObjectCaching();
     }
 
     /**
