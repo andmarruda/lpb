@@ -1,57 +1,65 @@
 # Laravel Page Builder (LPB)
 
-Laravel page builder with dual-database support: SQL (Eloquent) and MongoDB.
+A page builder backend for Laravel with SQL (Eloquent) and MongoDB storage.
+Laravel validates, stores and serves pages; the frontend framework (React,
+Vue, Svelte or Angular packages, in a separate repository) mounts and renders
+them.
 
-## Features
+- **One canonical page tree**: a nested, versioned JSON document
+  (`format_version` 1) identical for both drivers.
+- **Widgets defined in code** with a fluent schema builder producing JSON
+  Schema 2020-12; configs validated on every write and upgraded step by step
+  between widget versions.
+- **Atomic tree saves** with optimistic concurrency (`tree_version`).
+- **Draft and published content**: revisions only on publish, retention of
+  the last 3, rollback and restore to draft.
+- **Revision-keyed cache**: published payloads never need invalidation;
+  publishing only moves a pointer.
+- **Signed webhooks** for external frontends.
+- **HTTP APIs** for delivery and the editor, plus Blade shell views for the
+  Inertia and view flows.
 
-- **Dual Database Support**: Choose between SQL or MongoDB
-- **Repository Pattern**: Clean abstraction layer
-- **Embedded Documents**: MongoDB stores blocks, widget instances, metatags and menu items inside their parent document
-- **High Performance**: 1 query vs 4-20 queries (SQL) for page rendering
-- **100% Test Coverage**: Unit and integration tests
+Design decisions are recorded in [docs/adr](docs/adr) (ADR 07–13).
+
+## Requirements
+
+- PHP 8.2+
+- Laravel 10, 11 or 12
+- For MongoDB: the `mongodb` PHP extension and `mongodb/laravel-mongodb` ^5.0
+- For the Inertia flow: `inertiajs/inertia-laravel`
 
 ## Installation
 
 ```bash
 composer require andmarruda/lpb
-```
-
-### Configuration
-
-Publish configuration file:
-
-```bash
 php artisan vendor:publish --tag=lpb-config
 ```
 
-### SQL Driver (MySQL, PostgreSQL, SQLite)
+### SQL driver (MySQL, PostgreSQL, SQLite)
 
 ```bash
 php artisan vendor:publish --tag=lpb-migrations-sql
 php artisan migrate
 ```
 
-Configure `.env`:
-
 ```env
 LPB_DATABASE_DRIVER=sql
 LPB_SQL_CONNECTION=mysql
 ```
 
-### MongoDB Driver
+### MongoDB driver
 
 ```bash
 composer require mongodb/laravel-mongodb:^5.0
 ```
-
-Configure `.env`:
 
 ```env
 LPB_DATABASE_DRIVER=mongodb
 LPB_MONGODB_CONNECTION=mongodb
 ```
 
-Create the collections with their validators and indexes (safe to re-run):
+Create the collections with their validators and indexes (safe to re-run
+after every upgrade):
 
 ```bash
 php artisan lpb:install-mongo
@@ -59,122 +67,198 @@ php artisan lpb:install-mongo
 
 See [docs/MONGODB_SCHEMA.md](docs/MONGODB_SCHEMA.md) for the document structure.
 
-## Usage
+### Permissions
 
-### Create Page
+Editor routes require an authenticated user and two Gates, which deny until
+your application defines them:
 
 ```php
-use Andmarruda\Lpb\Repositories\Sql\PageRepository;
-use Andmarruda\Lpb\Models\Sql\Page;
-
-$repo = new PageRepository(new Page());
-
-$page = $repo->create([
-    'title' => 'Home',
-    'slug' => 'home',
-    'status' => 'published'
-]);
+Gate::define('lpb.edit', fn (User $user) => $user->isEditor());
+Gate::define('lpb.publish', fn (User $user) => $user->isPublisher());
 ```
 
-### Blocks and Widgets
+## Widgets
 
-Resolve repositories from the container so the configured driver is used:
+A widget is a PHP definition plus one render component per frontend:
 
 ```php
-use Andmarruda\Lpb\Contracts\BlockRepositoryInterface;
+use Andmarruda\Lpb\Widgets\Schema;
+use Andmarruda\Lpb\Widgets\WidgetDefinition;
+
+class Hero extends WidgetDefinition
+{
+    public string $name = 'hero';
+    public int $version = 2;
+
+    public function schema(Schema $s): Schema
+    {
+        return $s
+            ->string('title')->required()->maxLength(120)->label('Title')
+            ->media('image')
+            ->array('buttons', fn (Schema $b) => $b->string('label')->required()->link('link'));
+    }
+
+    // Migrates a config stored at version $from to $from + 1
+    public function upgrade(int $from, array $config): array
+    {
+        if ($from === 1 && isset($config['button'])) {
+            $config['buttons'] = [$config['button']];
+            unset($config['button']);
+        }
+        return $config;
+    }
+}
+```
+
+Register definitions in `config/laravel-page-builder.php`
+(`widgets.definitions`) or with `Lpb::widgets()->register(Hero::class)`.
+
+```bash
+php artisan lpb:make-widget Hero --frameworks=react,vue   # definition + component stubs
+php artisan lpb:types                                     # TypeScript types of every config
+php artisan lpb:widgets:schema --output=widgets.json      # definitions and JSON Schemas
+php artisan lpb:upgrade-content                           # rewrite stored configs to current versions
+```
+
+Field types: `string`, `integer`, `number`, `boolean`, `enum`, `array`,
+`object`, `media` (`{"$media": id}`, resolved in payloads), `link` and
+`richText` (HTML; renderers sanitise it). Modifiers: `required`, `default`,
+`min`, `max`, `maxLength`, `pattern`, `label`, `help`.
+
+## The page tree
+
+```json
+{
+  "format_version": 1,
+  "page": { "id": "…", "slug": "home", "title": "Home", "seo": {}, "metatags": [] },
+  "template": { "id": "…", "slug": "landing" },
+  "revision_id": "01JB…",
+  "design_version": 7,
+  "blocks": [
+    {
+      "id": "01JB…", "type": "flex",
+      "styles": [{ "breakpoint": null, "state": null, "props": { "gap": "24px" } }],
+      "widgets": [{ "id": "01JB…", "widget": "hero", "schema_version": 2, "config": { "title": "Welcome" }, "styles": [] }],
+      "children": []
+    }
+  ]
+}
+```
+
+- Blocks are `flex` or `grid`; each holds `widgets` (rendered first) and
+  `children`. Node ids are ULIDs; new nodes bring client-generated ids.
+- Styles are variants per breakpoint (`desktop`, `tablet`, `mobile` by
+  default) and state (`hover`, `focus`, `active`) with kebab-case CSS
+  properties; values may be `{"$var": "token"}`.
+- Trees are limited to `limits.max_depth` levels (10) and `limits.max_nodes`
+  nodes (1000).
+
+```php
 use Andmarruda\Lpb\Contracts\PageRepositoryInterface;
+use Andmarruda\Lpb\Contracts\PageTreeRepositoryInterface;
+use Andmarruda\Lpb\Contracts\PublishingServiceInterface;
 
-$pages = app(PageRepositoryInterface::class);
-$blocks = app(BlockRepositoryInterface::class);
+$page = app(PageRepositoryInterface::class)->create(['title' => 'Home', 'slug' => 'home']);
 
-$row = $blocks->create(['page_id' => $pageId, 'type' => 'row']);
-$column = $blocks->create(['page_id' => $pageId, 'type' => 'column', 'parent_id' => $row['id']]);
+$trees = app(PageTreeRepositoryInterface::class);
+$tree = $trees->getWorkingTree($page['id']);
+$tree['blocks'] = [/* … */];
+$trees->saveTree($page['id'], $tree, $tree['tree_version']); // TreeVersionConflictException if someone saved first
 
-$blocks->addWidgetInstance($column['id'], 'App\Widgets\HeroWidget', ['title' => 'Welcome']);
-
-$pages->setMetatag($pageId, 'description', 'Page description');
-$page = $pages->withBlocks($pageId);
+$publishing = app(PublishingServiceInterface::class);
+$revision = $publishing->publish($page['id'], by: (string) auth()->id());
+$publishing->rollback($page['id'], $olderRevisionId);
 ```
+
+Status changes only through the publishing service (`publish`, `unpublish`,
+`archive`, `unarchive`, `rollback`, `restoreToDraft`); pages are created as
+drafts.
+
+## Delivery
+
+```php
+use Andmarruda\Lpb\Delivery\PageDeliveryService;
+
+$payload = app(PageDeliveryService::class)->published('home'); // null when not published
+```
+
+Payloads are cached under `lpb:content:{revisionId}:{designVersion}`
+(immutable) behind a short pointer `lpb:pointer:{site}:{locale}:{slug}`
+that publishing events rewrite. `php artisan lpb:design:bump` (also run
+automatically when a template changes) gives every page a new content key.
+
+### Three ways to boot a page
+
+| Flow | Use | How |
+|---|---|---|
+| Inertia | React / Vue / Svelte with Inertia | `return Lpb::inertia('home');` — the template's `view_path` is the root view, the payload is the `page` prop |
+| View | Any framework without Inertia, including Angular | `return Lpb::view('home');` or `LPB_PAGES_ROUTE=/{slug}` — the shell embeds the payload and the framework mounts it |
+| External | Next, Nuxt, SvelteKit, Angular SSR | Delivery API plus webhooks |
+
+A shell view renders the `<head>` server-side and leaves the page to the
+frontend:
+
+```blade
+<head>
+    <x-lpb::head :page="$lpb" />
+    @vite('resources/js/app.js')
+</head>
+<body>
+    <div id="lpb-app"></div>
+    @lpbPayload
+</body>
+```
+
+The default shell is `lpb::shell` (`php artisan vendor:publish --tag=lpb-views`).
+
+### HTTP API
+
+Under `/lpb/api` (see [docs/openapi.yaml](docs/openapi.yaml)):
+
+- Delivery: `GET pages/{slug}` (with ETag), `GET menus/{location}`,
+  `GET preview/{token}` (signed, expiring URL).
+- Editor: widgets, pages (tree, publish, unpublish, archive, unarchive,
+  revisions, rollback, restore, preview token), templates, menus and media.
+  Validation errors carry JSON pointers into the tree
+  (`/blocks/0/widgets/1/config/title`); conflicts return 409 with
+  `current_version`.
+
+### Webhooks
+
+```env
+LPB_WEBHOOK_ENDPOINTS=https://front.example/api/revalidate
+LPB_WEBHOOK_SECRET=change-me
+```
+
+On publish, unpublish, archive, rollback and design bumps a queued job POSTs
+`{event, site, locale, slug, revision_id, design_version}` with
+`X-Lpb-Signature: t={time},v1={hex HMAC-SHA256 of "{time}.{body}"}`.
+Receivers can verify it with
+`Andmarruda\Lpb\Webhooks\WebhookSignature::verify($body, $header, $secret)`.
 
 ## Testing
 
-### Unit Tests
-
-Value objects, casts and repositories with mocked models; no database or
-Laravel application needed:
+Unit tests need no database or Laravel application:
 
 ```bash
 composer test
 ```
 
-### Integration Tests (Docker)
-
-Each script installs the package into a fresh Laravel application and runs
-the unit and feature suites against a real database:
+Integration suites install the package into a fresh Laravel application in
+Docker and run the unit and feature tests against a real database:
 
 ```bash
-composer test:sqlite   # shell/test-sql.sh   - SQLite
-composer test:mysql    # shell/test-mysql.sh - MySQL 8.4
-composer test:mongo    # shell/test-mongo.sh - MongoDB 7 with lpb:install-mongo applied
+composer test:sqlite   # SQLite
+composer test:mysql    # MySQL 8.4
+composer test:mongo    # MongoDB 7 with lpb:install-mongo applied
 composer test:all      # all three
 ```
 
-The feature suites include a shared acceptance scenario
-(`tests/Feature/Concerns/AcceptanceScenario.php`) that runs the same page
-lifecycle on every driver through the repository contracts: template,
-draft page, nested blocks with widget instances, SEO and metatags, publish
-with a revision, loading by slug with all relations, unpublish, and
-restoring the first revision.
+Most feature tests are shared scenarios in `tests/Feature/Concerns` that run
+identically on every driver.
 
-MySQL `JSON` columns and MongoDB documents may return object keys (widget
-config, media meta, revision payloads) in a different order than they were
-written; values and list order are preserved.
-
-## Performance
-
-### SQL (Normalized)
-- 4-20 queries per page load
-- Requires eager loading
-- 100-200ms average response time
-
-### MongoDB (Embedded)
-- 1 query per page load
-- No eager loading needed
-- 10-20ms average response time
-
-**Result**: MongoDB is 10x faster for read-heavy workloads
-
-## Architecture
-
-```
-src/
-├── app/
-│   ├── Contracts/
-│   │   ├── RepositoryInterface.php
-│   │   └── PageRepositoryInterface.php
-│   ├── Models/
-│   │   ├── Sql/
-│   │   │   ├── Page.php
-│   │   │   ├── PageWidget.php
-│   │   │   └── Metatag.php
-│   │   └── Mongo/
-│   │       ├── Page.php (embedded widgets/metatags)
-│   │       └── GlobalSetting.php
-│   └── Repositories/
-│       ├── BaseRepository.php
-│       ├── Sql/
-│       │   └── PageRepository.php
-│       └── Mongo/
-│           └── PageRepository.php
-└── config/
-    └── laravel-page-builder.php
-```
-
-## Requirements
-
-- PHP 8.2+
-- Laravel 10.x or 11.x
-- For MongoDB: mongodb PHP extension
+MySQL `JSON` columns and MongoDB documents may return object keys in a
+different order than they were written; values and list order are preserved.
 
 ## License
 
