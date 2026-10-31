@@ -56,9 +56,14 @@ final class Hero extends WidgetDefinition
   JSON Schema by hand unless they want to (a raw schema array is accepted).
 - The same schema generates the **TypeScript types** for the frontend
   renderers (`php artisan lpb:types`) and drives the editor's property panel.
-- `php artisan lpb:make-widget Hero --frameworks=react,vue` scaffolds the
+- `php artisan lpb:make-widget Hero --frameworks=react` scaffolds the
   definition and the render component for each chosen frontend (ADR 12).
-- Config is validated against the schema on every write.
+- Config is validated against the schema on every write, in Laravel, with
+  `opis/json-schema` (JSON Schema 2020-12), the same standard the editor
+  validates with (Ajv).
+- Definitions are **code-only**: a widget always needs a render component
+  per frontend, which is code too, so definitions are not stored in the
+  database.
 
 ### Config, styles and references
 

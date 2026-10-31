@@ -27,9 +27,9 @@ Two kinds of cache entries:
 1. **Content entries are immutable and keyed by revision**:
    `lpb:content:{revisionId}:{designVersion}`
    - The entry is the canonical page tree payload (ADR 12) that every
-     frontend mode receives. Laravel never renders page HTML, so it never
-     caches HTML; server-side rendering and its cache belong to the frontend
-     (Inertia SSR, Next, Nuxt, SvelteKit), which revalidates on the events
+     frontend mode receives. Laravel renders only the shell view around it,
+     which is cheap; rendering of page content and its cache belong to the
+     frontend (Inertia SSR, SvelteKit, ...), which revalidates on the events
      below.
    - These entries never need invalidation; they can have a long TTL.
 2. **Pointers are short and mutable**:

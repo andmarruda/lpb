@@ -35,8 +35,14 @@ A page layout is an **ordered tree**.
   (see ADR 10).
 - **Widget instances** are leaves inside a block, ordered by `order`.
 - Position is **parent + order**. Nothing stores x/y coordinates.
-- Every driver returns the tree in the same shape (ADR 12 defines the
-  canonical format).
+- A block keeps its widget instances and its child blocks in two separate
+  ordered lists.
+- The tree is bounded by a configurable maximum depth and number of nodes
+  per page, enforced on write by every driver.
+- SQL stores the tree as rows (`parent_id` + `order`); MongoDB stores it
+  nested inside the page document, in the canonical shape. Every driver
+  returns the tree in the same shape (ADR 12 defines the canonical format),
+  built in PHP.
 
 The widget ordering library (ADR 05) keeps its spatial engine for the drag
 interaction (hit testing, snapping, insertion cursor), but its output is a

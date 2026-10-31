@@ -25,14 +25,16 @@ Changes to the existing wiki ADRs that follow from Phase 1 and ADR 07–13.
 
 - Replace the key `lpb:page:{slug}:rendered` and the invalidate-on-update
   strategy with ADR 09 (immutable content keys per revision plus pointers).
-- "Rendered pages" becomes "page tree payloads": Laravel does not render page
-  HTML (ADR 12), so the application cache holds JSON only.
+- "Rendered pages" becomes "page tree payloads": Laravel renders only the
+  shell view, not page content (ADR 12), so the application cache holds the
+  JSON payload.
 
 ## ADR 03: Page Rendering Pipeline
 
-- Mark as **Superseded by ADR 12**. Blade is not the source of truth and
-  Laravel does not render page HTML; rendering happens in the Vue, React or
-  Svelte package.
+- Mark as **Superseded by ADR 12**. Blade is not the source of truth and does
+  not render page content; it only provides the shell view (template
+  `view_path`) that boots the Vue, React or Svelte package, as Inertia's root
+  view does.
 - What survives moves into ADR 12's payload builder: data comes from the
   **published snapshot** (ADR 08), the ordered block tree (ADR 07) and
   validated widget config (ADR 10).
@@ -55,10 +57,11 @@ Changes to the existing wiki ADRs that follow from Phase 1 and ADR 07–13.
 ## ADR 06: Multi-Framework Widget Library Integration
 
 - Fix the reference "See ADR 0002 for frontend stack details" to ADR 12.
-- Add Svelte to the adapter list (ADR 12 supports SvelteKit).
+- Add Svelte and Angular to the adapter list, in the order React, Vue,
+  Svelte, Angular (React first, replacing the earlier Vue-first plan).
 - The adapters become part of the framework packages of ADR 12
-  (`@lpb/vue`, `@lpb/react`, `@lpb/svelte`), and the framework-agnostic
-  engine part of `@lpb/core`.
+  (`@lpb/react`, `@lpb/vue`, `@lpb/svelte`, `@lpb/angular`), and the
+  framework-agnostic engine part of `@lpb/core`.
 
 ## Wiki pages
 
