@@ -53,6 +53,23 @@ class WidgetCommandsTest extends TestCase
     }
 
     /**
+     * Test the built-in library is registered when enabled, and a definition can replace one
+     */
+    public function test_widget_library(): void
+    {
+        $this->app->forgetInstance(WidgetRegistry::class);
+        config([
+            'laravel-page-builder.widgets.library' => true,
+            'laravel-page-builder.widgets.definitions' => [\Andmarruda\Lpb\Tests\Fixtures\Widgets\Text::class],
+        ]);
+        $registry = app(WidgetRegistry::class);
+
+        $this->assertCount(count(\Andmarruda\Lpb\Widgets\Library\Library::DEFINITIONS), $registry->all());
+        $this->assertSame('Price table', $registry->get('price-table')->label);
+        $this->assertInstanceOf(\Andmarruda\Lpb\Tests\Fixtures\Widgets\Text::class, $registry->get('text'));
+    }
+
+    /**
      * Test lpb:widgets:schema writes every definition with its JSON Schema
      */
     public function test_widgets_schema_command(): void

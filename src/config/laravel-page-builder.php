@@ -69,8 +69,13 @@ return [
         'path' => env('LPB_WIDGETS_PATH', app_path('Widgets')),
         'namespace' => env('LPB_WIDGETS_NAMESPACE', 'App\\Widgets'),
 
+        // The built-in widget library (heading, image, button, tabs, price
+        // table, ...; see Andmarruda\Lpb\Widgets\Library\Library)
+        'library' => env('LPB_WIDGET_LIBRARY', true),
+
         // WidgetDefinition classes registered at boot; more can be added
-        // with Lpb::widgets()->register(Hero::class)
+        // with Lpb::widgets()->register(Hero::class). A definition with the
+        // name of a library widget replaces it.
         'definitions' => [],
 
         // Where lpb:make-widget writes render component stubs, per framework

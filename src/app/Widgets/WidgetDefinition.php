@@ -46,6 +46,17 @@ abstract class WidgetDefinition
     abstract public function schema(Schema $s): Schema;
 
     /**
+     * A valid config showing what the widget does; used by editors (new
+     * instances), documentation and renderer conformance fixtures.
+     *
+     * @return array
+     */
+    public function example(): array
+    {
+        return [];
+    }
+
+    /**
      * Upgrade a config stored at version $from by one version, to $from + 1.
      *
      * @param int $from

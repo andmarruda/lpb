@@ -98,6 +98,14 @@ final class Schema
     }
 
     /**
+     * A list of strings, e.g. rotating words or tags.
+     */
+    public function strings(string $name): self
+    {
+        return $this->field($name, ['type' => 'array', 'items' => ['type' => 'string']]);
+    }
+
+    /**
      * A nested object described by the callback.
      *
      * @param string $name

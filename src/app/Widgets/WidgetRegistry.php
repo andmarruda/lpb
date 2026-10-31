@@ -99,6 +99,7 @@ class WidgetRegistry
             'label' => $definition->label ?? ucfirst(str_replace(['-', '.'], ' ', $definition->name)),
             'category' => $definition->category,
             'schema' => $this->schema($definition->name),
+            'example' => $definition->example(),
         ], $this->all()));
     }
 
@@ -184,8 +185,12 @@ class WidgetRegistry
         }
         $this->configLoaded = true;
 
-        $configured = $this->container->bound('config') ? $this->container->make('config')->get('laravel-page-builder.widgets.definitions', []) : [];
-        foreach ((array) $configured as $definition) {
+        $config = $this->container->bound('config') ? $this->container->make('config') : null;
+        $configured = (array) ($config?->get('laravel-page-builder.widgets.definitions', []) ?? []);
+        if ($config?->get('laravel-page-builder.widgets.library', true)) {
+            $configured = [...Library\Library::DEFINITIONS, ...$configured];
+        }
+        foreach ($configured as $definition) {
             $this->register($definition);
         }
     }
