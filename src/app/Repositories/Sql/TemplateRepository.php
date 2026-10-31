@@ -6,6 +6,7 @@ use Andmarruda\Lpb\Models\Sql\Page;
 use Andmarruda\Lpb\Models\Sql\Template;
 use Andmarruda\Lpb\Repositories\BaseRepository;
 use Andmarruda\Lpb\Contracts\TemplateRepositoryInterface;
+use Andmarruda\Lpb\Events\TemplateChanged;
 use Andmarruda\Lpb\ValueObjects\TemplateStatus;
 
 /**
@@ -40,10 +41,31 @@ class TemplateRepository extends BaseRepository implements TemplateRepositoryInt
             return false;
         }
 
-        return $this->model->getConnection()->transaction(function () use ($template, $id) {
+        $deleted = $this->model->getConnection()->transaction(function () use ($template, $id) {
             $this->pages->newQuery()->where('template_id', $id)->increment('tree_version');
             return (bool) $template->delete();
         });
+
+        if ($deleted) {
+            TemplateChanged::dispatch((string) $id);
+        }
+        return $deleted;
+    }
+
+    /**
+     * Update a template; pages using it may look different (design version bump).
+     *
+     * @param string|int $id The template identifier
+     * @param array $data The data to update
+     * @return array|null The updated template as array or null if not found
+     */
+    public function update(string|int $id, array $data): ?array
+    {
+        $template = parent::update($id, $data);
+        if ($template !== null) {
+            TemplateChanged::dispatch((string) $id);
+        }
+        return $template;
     }
 
     /**

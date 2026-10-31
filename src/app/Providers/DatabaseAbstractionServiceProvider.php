@@ -2,6 +2,7 @@
 namespace Andmarruda\Lpb\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Andmarruda\Lpb\Console\DesignBumpCommand;
 use Andmarruda\Lpb\Console\InstallMongoCommand;
 use Andmarruda\Lpb\Console\MakeWidgetCommand;
 use Andmarruda\Lpb\Console\TypesCommand;
@@ -17,6 +18,12 @@ use Andmarruda\Lpb\Contracts\BlockRepositoryInterface;
 use Andmarruda\Lpb\Contracts\MenuRepositoryInterface;
 use Andmarruda\Lpb\Contracts\MediaRepositoryInterface;
 use Andmarruda\Lpb\Contracts\RevisionRepositoryInterface;
+use Andmarruda\Lpb\Contracts\SettingsRepositoryInterface;
+use Andmarruda\Lpb\Delivery\BumpDesignOnTemplateChange;
+use Andmarruda\Lpb\Delivery\UpdatePointers;
+use Andmarruda\Lpb\Events\TemplateChanged;
+use Andmarruda\Lpb\Webhooks\NotifyWebhooks;
+use Illuminate\Support\Facades\Event;
 use Andmarruda\Lpb\Contracts\TemplateRepositoryInterface;
 use Andmarruda\Lpb\Repositories\Sql;
 use Andmarruda\Lpb\Repositories\Mongo;
@@ -36,6 +43,7 @@ class DatabaseAbstractionServiceProvider extends ServiceProvider
         MenuRepositoryInterface::class        => [Sql\MenuRepository::class, Mongo\MenuRepository::class],
         MediaRepositoryInterface::class       => [Sql\MediaRepository::class, Mongo\MediaRepository::class],
         RevisionRepositoryInterface::class    => [Sql\RevisionRepository::class, Mongo\RevisionRepository::class],
+        SettingsRepositoryInterface::class    => [Sql\SettingsRepository::class, Mongo\SettingsRepository::class],
     ];
 
     public function register(): void
@@ -58,6 +66,15 @@ class DatabaseAbstractionServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Delivery pointers, design version and webhooks follow the publishing
+        // events; listeners are resolved when an event fires, not at boot
+        foreach ([UpdatePointers::class, NotifyWebhooks::class] as $listener) {
+            foreach ($listener::listens() as $event => $method) {
+                Event::listen($event, [$listener, $method]);
+            }
+        }
+        Event::listen(TemplateChanged::class, BumpDesignOnTemplateChange::class);
+
         if ($this->app->runningInConsole()) {
             // Publish config
             $this->publishes([
@@ -71,6 +88,7 @@ class DatabaseAbstractionServiceProvider extends ServiceProvider
 
             // MongoDB collections, validators and indexes are created by a command instead of migrations
             $this->commands([
+                DesignBumpCommand::class,
                 InstallMongoCommand::class,
                 MakeWidgetCommand::class,
                 TypesCommand::class,

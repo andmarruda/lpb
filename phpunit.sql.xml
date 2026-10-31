@@ -16,6 +16,7 @@
             <directory>tests/Unit/Casts</directory>
             <directory>tests/Unit/Tree</directory>
             <directory>tests/Unit/Validation</directory>
+            <directory>tests/Unit/Webhooks</directory>
             <directory>tests/Unit/Widgets</directory>
         </testsuite>
         <testsuite name="Feature">
@@ -35,6 +36,9 @@
 
     <php>
         <env name="APP_ENV" value="testing"/>
+        <env name="CACHE_STORE" value="array"/>
+        <env name="CACHE_DRIVER" value="array"/>
+        <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="LPB_DATABASE_DRIVER" value="sql"/>
         <env name="LPB_SQL_CONNECTION" value="sqlite"/>
     </php>

@@ -6,6 +6,7 @@ use Andmarruda\Lpb\Models\Mongo\Page;
 use Andmarruda\Lpb\Models\Mongo\Template;
 use Andmarruda\Lpb\Repositories\BaseRepository;
 use Andmarruda\Lpb\Contracts\TemplateRepositoryInterface;
+use Andmarruda\Lpb\Events\TemplateChanged;
 use Andmarruda\Lpb\ValueObjects\TemplateStatus;
 
 /**
@@ -41,6 +42,9 @@ class TemplateRepository extends BaseRepository implements TemplateRepositoryInt
         if ($template && array_key_exists('slug', $data)) {
             $this->pages->where('template_id', (string) $id)->update(['template_slug' => $template['slug']]);
         }
+        if ($template) {
+            TemplateChanged::dispatch((string) $id);
+        }
         return $template;
     }
 
@@ -57,6 +61,7 @@ class TemplateRepository extends BaseRepository implements TemplateRepositoryInt
             $pages = $this->pages->where('template_id', (string) $id);
             $pages->clone()->increment('tree_version');
             $pages->update(['template_id' => null, 'template_slug' => null]);
+            TemplateChanged::dispatch((string) $id);
         }
         return $deleted;
     }

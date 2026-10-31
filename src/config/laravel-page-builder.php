@@ -43,14 +43,18 @@ return [
     | Cache Settings
     |--------------------------------------------------------------------------
     |
-    | Configure Laravel Cache (not database-level caching)
+    | Delivery cache (ADR 09): pointers (slug -> served revision) live for
+    | 'ttl' seconds and are rewritten by publishing events; content entries
+    | are immutable (keyed by revision and design version) and live for
+    | 'content_ttl' seconds, or forever when null. 'store' is a cache store
+    | from config/cache.php (null for the default store).
     |
     */
     'cache' => [
         'enabled' => env('LPB_CACHE_ENABLED', true),
+        'store' => env('LPB_CACHE_STORE'),
         'ttl' => env('LPB_CACHE_TTL', 3600),
-        'prefix' => env('LPB_CACHE_PREFIX', 'lpb_'),
-        'tags' => ['lpb', 'pages'],
+        'content_ttl' => env('LPB_CACHE_CONTENT_TTL'),
     ],
 
     /*

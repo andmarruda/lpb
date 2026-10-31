@@ -13,64 +13,45 @@ use Andmarruda\Lpb\ValueObjects\CacheKey;
 class CacheKeyTest extends TestCase
 {
     /**
-     * Test the key string is composed of prefix, type, driver and identifier
+     * Test content keys are made of the revision and design version
      */
-    public function test_to_string(): void
+    public function test_content_key(): void
     {
-        $key = CacheKey::for('page', 'sql', 'home');
+        $key = CacheKey::content('01JB0000000000000000000000', 7);
 
-        $this->assertSame('lpb:page:sql:home', $key->toString());
-        $this->assertSame('lpb:page:sql:home', (string) $key);
+        $this->assertSame('lpb:content:01JB0000000000000000000000:7', $key->toString());
+        $this->assertSame('lpb:content:01JB0000000000000000000000:7', (string) $key);
     }
 
     /**
-     * Test mongodb is normalised to mongo and integer ids are accepted
+     * Test pointer keys carry site and locale, default until multi-site and localisation
      */
-    public function test_mongodb_alias_and_integer_identifier(): void
+    public function test_pointer_key(): void
     {
-        $this->assertSame('lpb:menu:mongo:42', CacheKey::for('menu', 'mongodb', 42)->toString());
-    }
-
-    /**
-     * Test custom prefix
-     */
-    public function test_custom_prefix(): void
-    {
-        $this->assertSame('site:template:sql:blog', CacheKey::for('template', 'sql', 'blog', 'site')->toString());
-    }
-
-    /**
-     * Test tags cover all entities, the entity type and the single entity
-     */
-    public function test_tagged(): void
-    {
-        $this->assertSame(
-            ['lpb', 'lpb:page', 'lpb:page:home'],
-            CacheKey::for('page', 'sql', 'home')->tagged()
-        );
+        $this->assertSame('lpb:pointer:default:default:home', CacheKey::pointer('home')->toString());
+        $this->assertSame('lpb:pointer:shop:pt-br:about-us', CacheKey::pointer('about-us', 'pt-br', 'shop')->toString());
+        $this->assertSame('site:pointer:default:default:home', CacheKey::pointer('home', prefix: 'site')->toString());
     }
 
     /**
      * Test invalid parts are rejected
      */
-    #[DataProvider('invalidParts')]
-    public function test_rejects_invalid_parts(string $type, string $driver, string|int $identifier, string $prefix): void
+    #[DataProvider('invalidKeys')]
+    public function test_rejects_invalid_parts(callable $make): void
     {
         $this->expectException(InvalidValueException::class);
 
-        CacheKey::for($type, $driver, $identifier, $prefix);
+        $make();
     }
 
-    public static function invalidParts(): array
+    public static function invalidKeys(): array
     {
         return [
-            'unknown driver' => ['page', 'redis', 'home', 'lpb'],
-            'empty type' => ['', 'sql', 'home', 'lpb'],
-            'type with colon' => ['pa:ge', 'sql', 'home', 'lpb'],
-            'empty identifier' => ['page', 'sql', '', 'lpb'],
-            'identifier with colon' => ['page', 'sql', 'a:b', 'lpb'],
-            'identifier with space' => ['page', 'sql', 'a b', 'lpb'],
-            'empty prefix' => ['page', 'sql', 'home', ''],
+            'empty revision' => [fn () => CacheKey::content('', 1)],
+            'design version zero' => [fn () => CacheKey::content('01JB', 0)],
+            'colon in slug' => [fn () => CacheKey::pointer('a:b')],
+            'space in locale' => [fn () => CacheKey::pointer('home', 'pt br')],
+            'bad prefix' => [fn () => CacheKey::pointer('home', prefix: 'Bad Prefix')],
         ];
     }
 }

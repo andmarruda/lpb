@@ -4,82 +4,61 @@ namespace Andmarruda\Lpb\ValueObjects;
 use Andmarruda\Lpb\Exceptions\InvalidValueException;
 
 /**
- * Cache key for an entity, e.g. 'lpb:page:sql:home'.
+ * Delivery cache keys (ADR 09):
+ *
+ * - content: 'lpb:content:{revisionId}:{designVersion}', immutable, the
+ *   canonical payload of a revision under a design version;
+ * - pointer: 'lpb:pointer:{site}:{locale}:{slug}', short-lived, the
+ *   revision a slug serves.
+ *
+ * site and locale are 'default' until multi-site and localisation exist.
  */
 final readonly class CacheKey
 {
-    private const DRIVERS = ['sql', 'mongo'];
-    private const PART_PATTERN = '/^[a-z0-9_-]+$/';
+    public const DEFAULT = 'default';
 
-    private string $driver;
-    private string $identifier;
+    private const PREFIX_PATTERN = '/^[a-z0-9_-]+$/';
 
     /**
-     * @param string $type Entity type, e.g. page, template, menu
-     * @param string $driver 'sql' or 'mongo' ('mongodb' is accepted as an alias)
-     * @param string|int $identifier Entity id or slug
-     * @param string $prefix Key namespace
+     * @param string[] $parts
      */
-    private function __construct(
-        private string $type,
-        string $driver,
-        string|int $identifier,
-        private string $prefix,
-    ) {
-        $driver = $driver === 'mongodb' ? 'mongo' : $driver;
-
-        if (!in_array($driver, self::DRIVERS, true)) {
-            throw new InvalidValueException("Invalid cache driver '{$driver}'. Use 'sql' or 'mongo'.");
-        }
-
-        foreach (['type' => $type, 'prefix' => $prefix] as $name => $part) {
-            if (!preg_match(self::PART_PATTERN, $part)) {
-                throw new InvalidValueException("Invalid cache key {$name} '{$part}'.");
+    private function __construct(private array $parts)
+    {
+        foreach ($parts as $part) {
+            if ($part === '' || preg_match('/[\s:]/', $part)) {
+                throw new InvalidValueException("Invalid cache key part '{$part}'.");
             }
         }
-
-        $identifier = (string) $identifier;
-        if ($identifier === '' || preg_match('/[\s:]/', $identifier)) {
-            throw new InvalidValueException("Invalid cache key identifier '{$identifier}'.");
-        }
-
-        $this->driver = $driver;
-        $this->identifier = $identifier;
     }
 
-    /**
-     * @param string $type
-     * @param string $driver
-     * @param string|int $identifier
-     * @param string $prefix
-     * @return self
-     */
-    public static function for(string $type, string $driver, string|int $identifier, string $prefix = 'lpb'): self
+    public static function content(string $revisionId, int $designVersion, string $prefix = 'lpb'): self
     {
-        return new self($type, $driver, $identifier, $prefix);
+        if ($designVersion < 1) {
+            throw new InvalidValueException('The design version must be 1 or higher.');
+        }
+        return new self([self::prefix($prefix), 'content', $revisionId, (string) $designVersion]);
+    }
+
+    public static function pointer(string $slug, string $locale = self::DEFAULT, string $site = self::DEFAULT, string $prefix = 'lpb'): self
+    {
+        return new self([self::prefix($prefix), 'pointer', $site, $locale, $slug]);
     }
 
     public function toString(): string
     {
-        return implode(':', [$this->prefix, $this->type, $this->driver, $this->identifier]);
-    }
-
-    /**
-     * Tags for invalidating everything, everything of this type, or this entity.
-     *
-     * @return string[]
-     */
-    public function tagged(): array
-    {
-        return [
-            $this->prefix,
-            "{$this->prefix}:{$this->type}",
-            "{$this->prefix}:{$this->type}:{$this->identifier}",
-        ];
+        return implode(':', $this->parts);
     }
 
     public function __toString(): string
     {
         return $this->toString();
+    }
+
+    private static function prefix(string $prefix): string
+    {
+        if (!preg_match(self::PREFIX_PATTERN, $prefix)) {
+            throw new InvalidValueException("Invalid cache key prefix '{$prefix}'.");
+        }
+        return $prefix;
     }
 }
