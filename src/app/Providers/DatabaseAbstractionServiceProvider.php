@@ -5,10 +5,12 @@ use Illuminate\Support\ServiceProvider;
 use Andmarruda\Lpb\Console\InstallMongoCommand;
 use Andmarruda\Lpb\Console\MakeWidgetCommand;
 use Andmarruda\Lpb\Console\TypesCommand;
+use Andmarruda\Lpb\Console\UpgradeContentCommand;
 use Andmarruda\Lpb\Console\WidgetsSchemaCommand;
 use Andmarruda\Lpb\Lpb;
 use Andmarruda\Lpb\Widgets\WidgetRegistry;
 use Andmarruda\Lpb\Contracts\PageRepositoryInterface;
+use Andmarruda\Lpb\Contracts\PageTreeRepositoryInterface;
 use Andmarruda\Lpb\Contracts\BlockRepositoryInterface;
 use Andmarruda\Lpb\Contracts\MenuRepositoryInterface;
 use Andmarruda\Lpb\Contracts\MediaRepositoryInterface;
@@ -26,6 +28,7 @@ class DatabaseAbstractionServiceProvider extends ServiceProvider
      */
     protected array $repositories = [
         PageRepositoryInterface::class        => [Sql\PageRepository::class, Mongo\PageRepository::class],
+        PageTreeRepositoryInterface::class    => [Sql\PageTreeRepository::class, Mongo\PageTreeRepository::class],
         TemplateRepositoryInterface::class    => [Sql\TemplateRepository::class, Mongo\TemplateRepository::class],
         BlockRepositoryInterface::class       => [Sql\BlockRepository::class, Mongo\BlockRepository::class],
         MenuRepositoryInterface::class        => [Sql\MenuRepository::class, Mongo\MenuRepository::class],
@@ -68,6 +71,7 @@ class DatabaseAbstractionServiceProvider extends ServiceProvider
                 InstallMongoCommand::class,
                 MakeWidgetCommand::class,
                 TypesCommand::class,
+                UpgradeContentCommand::class,
                 WidgetsSchemaCommand::class,
             ]);
         }
