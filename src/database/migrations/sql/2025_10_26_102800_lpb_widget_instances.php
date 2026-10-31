@@ -11,10 +11,12 @@ return new class extends Migration {
 
     public function up(): void {
         Schema::create('lpb_widget_instances', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedBigInteger('block_id');
+            $table->char('id', 26)->primary();
+            $table->char('block_id', 26);
             $table->string('widget');
+            $table->unsignedSmallInteger('schema_version')->default(1);
             $table->json('config');
+            $table->json('styles')->nullable();
             $table->unsignedSmallInteger('order')->default(0);
             $table->timestamps();
 

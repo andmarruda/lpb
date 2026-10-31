@@ -28,6 +28,25 @@ class TemplateRepository extends BaseRepository implements TemplateRepositoryInt
     }
 
     /**
+     * Delete a template; its pages lose it (foreign key) and get a new tree_version.
+     *
+     * @param string|int $id The template identifier
+     * @return bool True if deleted successfully, false otherwise
+     */
+    public function delete(string|int $id): bool
+    {
+        $template = $this->model->find($id);
+        if (!$template) {
+            return false;
+        }
+
+        return $this->model->getConnection()->transaction(function () use ($template, $id) {
+            $this->pages->newQuery()->where('template_id', $id)->increment('tree_version');
+            return (bool) $template->delete();
+        });
+    }
+
+    /**
      * Find a template by its slug.
      *
      * @param string $slug The template slug
@@ -93,6 +112,7 @@ class TemplateRepository extends BaseRepository implements TemplateRepositoryInt
         }
 
         $page->template()->associate($template)->save();
+        $page->newQuery()->whereKey($pageId)->increment('tree_version');
         return true;
     }
 
@@ -110,6 +130,7 @@ class TemplateRepository extends BaseRepository implements TemplateRepositoryInt
         }
 
         $page->template()->dissociate()->save();
+        $page->newQuery()->whereKey($pageId)->increment('tree_version');
         return true;
     }
 }

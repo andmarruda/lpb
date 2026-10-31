@@ -1,6 +1,7 @@
 <?php
 namespace Andmarruda\Lpb\Models\Sql;
 
+use Andmarruda\Lpb\Models\Concerns\HasUlidKey;
 use Andmarruda\Lpb\Models\Concerns\UsesConfiguredConnection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -8,15 +9,17 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Block extends Model
 {
-    use UsesConfiguredConnection;
+    use HasUlidKey, UsesConfiguredConnection;
 
     protected $table = 'lpb_blocks';
 
     protected $fillable = [
+        'id',
         'page_id',
         'parent_id',
         'type',
         'order',
+        'styles',
     ];
 
     protected $attributes = [
@@ -24,8 +27,8 @@ class Block extends Model
     ];
 
     protected $casts = [
-        'parent_id' => 'integer',
         'order' => 'integer',
+        'styles' => 'array',
     ];
 
     /**

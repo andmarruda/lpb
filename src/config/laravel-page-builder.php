@@ -64,6 +64,118 @@ return [
     'widgets' => [
         'path' => env('LPB_WIDGETS_PATH', app_path('Widgets')),
         'namespace' => env('LPB_WIDGETS_NAMESPACE', 'App\\Widgets'),
+
+        // WidgetDefinition classes registered at boot; more can be added
+        // with Lpb::widgets()->register(Hero::class)
+        'definitions' => [],
+
+        // Where lpb:make-widget writes render component stubs, per framework
+        'frontend_path' => env('LPB_WIDGETS_FRONTEND_PATH', resource_path('js/lpb/widgets')),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Page Tree Limits
+    |--------------------------------------------------------------------------
+    |
+    | Maximum block nesting depth and maximum number of nodes (blocks plus
+    | widget instances) per page. Larger trees are rejected on write.
+    |
+    */
+    'limits' => [
+        'max_depth' => (int) env('LPB_MAX_DEPTH', 10),
+        'max_nodes' => (int) env('LPB_MAX_NODES', 1000),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Breakpoints
+    |--------------------------------------------------------------------------
+    |
+    | Style variants target a breakpoint by key; the value is the maximum
+    | width in pixels (null for the base breakpoint).
+    |
+    */
+    'breakpoints' => [
+        'desktop' => null,
+        'tablet' => 1024,
+        'mobile' => 767,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Revisions
+    |--------------------------------------------------------------------------
+    |
+    | Published revisions kept per page; the published one is never pruned.
+    |
+    */
+    'revisions' => [
+        'keep' => (int) env('LPB_REVISIONS_KEEP', 3),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | HTTP Routes
+    |--------------------------------------------------------------------------
+    |
+    | Delivery (public) and editor (protected by middleware and the lpb.edit
+    | and lpb.publish Gates) JSON APIs, and the optional page route of the
+    | view flow (e.g. '/{slug}', disabled when null).
+    |
+    */
+    'routes' => [
+        'enabled' => env('LPB_ROUTES_ENABLED', true),
+        'prefix' => env('LPB_ROUTES_PREFIX', 'lpb/api'),
+        'middleware' => ['api'],
+        'pages' => env('LPB_PAGES_ROUTE'),
+        'pages_middleware' => ['web'],
+    ],
+
+    'editor' => [
+        'middleware' => ['web', 'auth'],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Preview
+    |--------------------------------------------------------------------------
+    |
+    | Lifetime in seconds of the signed preview URLs issued by the editor.
+    |
+    */
+    'preview' => [
+        'ttl' => (int) env('LPB_PREVIEW_TTL', 3600),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Inertia
+    |--------------------------------------------------------------------------
+    |
+    | Page component rendered by Lpb::inertia().
+    |
+    */
+    'inertia' => [
+        'component' => env('LPB_INERTIA_COMPONENT', 'Lpb/Page'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Webhooks
+    |--------------------------------------------------------------------------
+    |
+    | Endpoints notified on publish, unpublish, archive, rollback and design
+    | bumps. Payloads are signed with HMAC-SHA256 in X-Lpb-Signature.
+    |
+    */
+    'webhooks' => [
+        'endpoints' => array_filter(explode(',', (string) env('LPB_WEBHOOK_ENDPOINTS', ''))),
+        'secret' => env('LPB_WEBHOOK_SECRET'),
+        'queue' => env('LPB_WEBHOOK_QUEUE'),
+        'tries' => 5,
+        'backoff' => [10, 60, 300, 900],
+        'timeout' => 10,
     ],
 
     /*

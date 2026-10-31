@@ -17,26 +17,30 @@ class Page extends Model
 
     protected $fillable = [
         'title',
-        'extra_css',
-        'extra_js',
         'slug',
         'status',
         'template_id',
         'template_slug',
         'metatags',
-        'blocks',
         'seo',
     ];
 
+    // blocks (nested tree), block_ids (index of every block id in the tree),
+    // tree_version and published_revision_id are maintained by the
+    // repositories and the publishing service, never mass assigned
     protected $attributes = [
         'status' => 'draft',
+        'tree_version' => 0,
     ];
+
+    protected $hidden = ['block_ids'];
 
     // metatags and blocks have no cast: an "array" cast would store them as
     // JSON strings instead of embedded documents.
     protected $casts = [
         'status' => PublishState::class,
         'seo' => SeoCast::class . ':document',
+        'tree_version' => 'integer',
     ];
 
     /**

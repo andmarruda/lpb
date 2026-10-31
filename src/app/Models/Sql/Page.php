@@ -20,23 +20,23 @@ class Page extends Model
 
     protected $fillable = [
         'title',
-        'extra_css',
-        'extra_js',
         'slug',
         'status',
         'template_id',
         'seo',
     ];
 
+    // tree_version and published_revision_id are not fillable: they are
+    // maintained by the repositories and the publishing service
     protected $attributes = [
         'status' => 'draft',
+        'tree_version' => 0,
     ];
 
     protected $casts = [
         'status' => PublishState::class,
-        'extra_css' => 'string',
-        'extra_js' => 'string',
         'seo' => SeoCast::class,
+        'tree_version' => 'integer',
     ];
 
     /**

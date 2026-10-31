@@ -7,6 +7,7 @@ use Andmarruda\Lpb\Models\Mongo\Revision;
 use Andmarruda\Lpb\Models\Mongo\Template;
 use Andmarruda\Lpb\Repositories\BaseRepository;
 use Andmarruda\Lpb\Repositories\Concerns\ManagesPageState;
+use Andmarruda\Lpb\Tree\FlatTree;
 use Andmarruda\Lpb\ValueObjects\PublishState;
 use Andmarruda\Lpb\Contracts\PageRepositoryInterface;
 use Andmarruda\Lpb\Contracts\RevisionRepositoryInterface;
@@ -134,6 +135,7 @@ class PageRepository extends BaseRepository implements PageRepositoryInterface
         $page = $this->model->find($pageId);
         if ($page) {
             $page->setMetatag($name, $content);
+            $this->bumpTreeVersion($pageId);
             return $page->fresh()->toArray();
         }
         return null;
@@ -183,7 +185,7 @@ class PageRepository extends BaseRepository implements PageRepositoryInterface
      */
     protected function withPresentedBlocks(array $data): array
     {
-        $data['blocks'] = EmbeddedBlocks::presentAll((string) ($data['id'] ?? $data['_id']), $data['blocks'] ?? []);
+        $data['blocks'] = EmbeddedBlocks::presentAll((string) ($data['id'] ?? $data['_id']), FlatTree::flatten($data['blocks'] ?? []));
         return $data;
     }
 }

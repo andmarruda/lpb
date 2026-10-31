@@ -1,6 +1,7 @@
 <?php
 namespace Andmarruda\Lpb\Models\Sql;
 
+use Andmarruda\Lpb\Models\Concerns\HasUlidKey;
 use Andmarruda\Lpb\Models\Concerns\UsesConfiguredConnection;
 use Illuminate\Database\Eloquent\Model;
 use LogicException;
@@ -8,7 +9,7 @@ use Andmarruda\Lpb\ValueObjects\PublishState;
 
 class Revision extends Model
 {
-    use UsesConfiguredConnection;
+    use HasUlidKey, UsesConfiguredConnection;
 
     const UPDATED_AT = null;
 
@@ -19,12 +20,14 @@ class Revision extends Model
         'revisionable_id',
         'payload',
         'status',
+        'tree_version',
         'created_by',
     ];
 
     protected $casts = [
         'payload' => 'array',
         'status' => PublishState::class,
+        'tree_version' => 'integer',
     ];
 
     /**

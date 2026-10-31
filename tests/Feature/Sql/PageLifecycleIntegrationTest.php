@@ -59,7 +59,7 @@ class PageLifecycleIntegrationTest extends TestCase
     public function test_transition_records_revision(): void
     {
         $page = $this->createPage();
-        $block = $this->blocks->create(['page_id' => $page['id'], 'type' => 'row']);
+        $block = $this->blocks->create(['page_id' => $page['id'], 'type' => 'flex']);
         $this->blocks->addWidgetInstance($block['id'], 'hero', ['title' => 'Welcome']);
         $this->pages->setMetatag($page['id'], 'description', 'Home page');
         $this->pages->setSeo($page['id'], new SEO(title: 'Home'));

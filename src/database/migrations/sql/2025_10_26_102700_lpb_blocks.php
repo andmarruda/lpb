@@ -11,11 +11,12 @@ return new class extends Migration {
 
     public function up(): void {
         Schema::create('lpb_blocks', function (Blueprint $table) {
-            $table->id();
+            $table->char('id', 26)->primary();
             $table->uuid('page_id');
-            $table->unsignedBigInteger('parent_id')->nullable();
+            $table->char('parent_id', 26)->nullable();
             $table->string('type');
             $table->unsignedSmallInteger('order')->default(0);
+            $table->json('styles')->nullable();
             $table->timestamps();
 
             $table->foreign('page_id', 'fk_blocks_page')

@@ -15,7 +15,8 @@ use Andmarruda\Lpb\Exceptions\InvalidRelationException;
  * SQL implementation of the Block repository.
  *
  * Deleting a block cascades to its widget instances and turns its children
- * into root blocks through the foreign keys.
+ * into root blocks through the foreign keys. Every write increments the
+ * page's tree_version and is checked against the tree limits.
  */
 class BlockRepository extends BaseRepository implements BlockRepositoryInterface
 {
@@ -59,7 +60,7 @@ class BlockRepository extends BaseRepository implements BlockRepositoryInterface
     /**
      * Create a block on a page.
      *
-     * @param array $data page_id and type are required; parent_id and order are optional
+     * @param array $data page_id and type are required; id (a client-generated ULID), parent_id, order and styles are optional
      * @return array The created block as array
      */
     public function create(array $data): array
@@ -70,12 +71,17 @@ class BlockRepository extends BaseRepository implements BlockRepositoryInterface
         }
 
         $attributes = $this->blockAttributes($data, true);
+        $id = $this->newBlockId($data);
         if (($attributes['parent_id'] ?? null) !== null) {
             $this->assertParentRecord($this->model, 'page_id', $pageId, $attributes['parent_id'], null, 'block');
         }
 
-        $block = $this->model->create(['page_id' => $pageId] + $attributes);
-        return $this->find($block->getKey());
+        $blocks = $this->getForPage($pageId);
+        $blocks[] = ['id' => $id, 'parent_id' => $attributes['parent_id'] ?? null, 'type' => $attributes['type'], 'widget_instances' => []];
+        $this->assertWithinLimits($blocks);
+
+        $this->writing($pageId, fn () => $this->model->create(['id' => $id, 'page_id' => $pageId] + $attributes));
+        return $this->find($id);
     }
 
     /**
@@ -97,8 +103,33 @@ class BlockRepository extends BaseRepository implements BlockRepositoryInterface
             $this->assertParentRecord($this->model, 'page_id', $block->page_id, $attributes['parent_id'], $block->getKey(), 'block');
         }
 
-        $block->update($attributes);
+        if (array_key_exists('parent_id', $attributes)) {
+            $blocks = array_map(
+                fn (array $row) => $row['id'] === (string) $block->getKey() ? ['parent_id' => $attributes['parent_id']] + $row : $row,
+                $this->getForPage($block->page_id)
+            );
+            $this->assertWithinLimits($blocks);
+        }
+
+        $this->writing($block->page_id, fn () => $block->update($attributes));
         return $this->find($id);
+    }
+
+    /**
+     * Delete a block and its widget instances; its children become root blocks.
+     *
+     * @param string|int $id The block identifier
+     * @return bool False if the block was not found
+     */
+    public function delete(string|int $id): bool
+    {
+        $block = $this->model->find($id);
+        if (!$block) {
+            return false;
+        }
+
+        $this->writing($block->page_id, fn () => $block->delete());
+        return true;
     }
 
     /**
@@ -119,22 +150,20 @@ class BlockRepository extends BaseRepository implements BlockRepositoryInterface
      * Add a widget instance to a block.
      *
      * @param string|int $blockId The block identifier
-     * @param string $widget Widget class name or registered alias
+     * @param string $widget Registered widget name
      * @param array $config Widget configuration
      * @param int $order Position inside the block
+     * @param array $styles Style variants
      * @return array The created widget instance as array
      */
-    public function addWidgetInstance(string|int $blockId, string $widget, array $config, int $order = 0): array
+    public function addWidgetInstance(string|int $blockId, string $widget, array $config, int $order = 0, array $styles = []): array
     {
         $block = $this->model->find($blockId) ?? throw new InvalidRelationException("Block '{$blockId}' not found.");
-        $this->assertWidget($widget);
+        $attributes = $this->widgetInstanceAttributes($widget, $config, $styles) + ['order' => $this->validOrder($order)];
 
-        $instance = $block->widgetInstances()->create([
-            'widget' => $widget,
-            'config' => $config,
-            'order' => $this->validOrder($order),
-        ]);
+        $this->assertWithinLimits($this->withWidgetInstance($this->getForPage($block->page_id), (string) $block->getKey(), $attributes));
 
+        $instance = $this->writing($block->page_id, fn () => $block->widgetInstances()->create($attributes));
         return $instance->fresh()->toArray();
     }
 
@@ -153,8 +182,8 @@ class BlockRepository extends BaseRepository implements BlockRepositoryInterface
             return null;
         }
 
-        $instance->setConfig($config);
-        $instance->save();
+        $attributes = $this->widgetInstanceAttributes($instance->widget, $config, null);
+        $this->writing($instance->block->page_id, fn () => $instance->update($attributes));
         return $instance->fresh()->toArray();
     }
 
@@ -167,7 +196,13 @@ class BlockRepository extends BaseRepository implements BlockRepositoryInterface
      */
     public function removeWidgetInstance(string|int $blockId, string|int $widgetInstanceId): bool
     {
-        return (bool) $this->widgetInstances->where('block_id', $blockId)->whereKey($widgetInstanceId)->delete();
+        $instance = $this->widgetInstances->where('block_id', $blockId)->find($widgetInstanceId);
+        if (!$instance) {
+            return false;
+        }
+
+        $this->writing($instance->block->page_id, fn () => $instance->delete());
+        return true;
     }
 
     /**
@@ -192,12 +227,28 @@ class BlockRepository extends BaseRepository implements BlockRepositoryInterface
             return false;
         }
 
-        $this->model->getConnection()->transaction(function () use ($ids) {
+        $this->writing($pageId, function () use ($ids) {
             foreach ($ids as $position => $id) {
                 $this->model->whereKey($id)->update(['order' => $position]);
             }
         });
 
         return true;
+    }
+
+    /**
+     * Run a write in a transaction and increment the page's tree_version.
+     *
+     * @param string|int $pageId
+     * @param callable $write
+     * @return mixed The write's result
+     */
+    protected function writing(string|int $pageId, callable $write): mixed
+    {
+        return $this->model->getConnection()->transaction(function () use ($pageId, $write) {
+            $result = $write();
+            $this->pages->newQuery()->whereKey($pageId)->increment('tree_version');
+            return $result;
+        });
     }
 }

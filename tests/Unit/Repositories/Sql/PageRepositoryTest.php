@@ -148,6 +148,11 @@ class PageRepositoryTest extends TestCase
             ->with($id)
             ->andReturn($pageMock);
 
+        $queryMock = Mockery::mock();
+        $queryMock->shouldReceive('whereKey')->once()->with($id)->andReturnSelf();
+        $queryMock->shouldReceive('increment')->once()->with('tree_version');
+        $this->modelMock->shouldReceive('newQuery')->once()->andReturn($queryMock);
+
         $result = $this->repository->update($id, $data);
 
         $this->assertNotNull($result);
@@ -397,7 +402,7 @@ class PageRepositoryTest extends TestCase
             'blocks' => [
                 [
                     'id' => 1,
-                    'type' => 'row',
+                    'type' => 'flex',
                     'widget_instances' => [
                         ['id' => 1, 'widget' => 'hero', 'config' => []]
                     ]

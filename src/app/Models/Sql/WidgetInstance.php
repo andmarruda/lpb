@@ -1,30 +1,36 @@
 <?php
 namespace Andmarruda\Lpb\Models\Sql;
 
+use Andmarruda\Lpb\Models\Concerns\HasUlidKey;
 use Andmarruda\Lpb\Models\Concerns\UsesConfiguredConnection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class WidgetInstance extends Model
 {
-    use UsesConfiguredConnection;
+    use HasUlidKey, UsesConfiguredConnection;
 
     protected $table = 'lpb_widget_instances';
 
     protected $fillable = [
+        'id',
         'block_id',
         'widget',
+        'schema_version',
         'config',
+        'styles',
         'order',
     ];
 
     protected $attributes = [
         'order' => 0,
+        'schema_version' => 1,
     ];
 
     protected $casts = [
-        'block_id' => 'integer',
+        'schema_version' => 'integer',
         'config' => 'array',
+        'styles' => 'array',
         'order' => 'integer',
     ];
 

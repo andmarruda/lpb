@@ -23,7 +23,7 @@ trait AcceptanceScenario
     /**
      * Fields restored from a page revision payload.
      */
-    private const RESTORABLE_FIELDS = ['title', 'slug', 'status', 'template_id', 'seo', 'extra_css', 'extra_js'];
+    private const RESTORABLE_FIELDS = ['title', 'slug', 'status', 'template_id', 'seo'];
 
     /**
      * Test the full page lifecycle through the repository contracts
@@ -48,8 +48,8 @@ trait AcceptanceScenario
         $this->assertTrue($templates->attachToPage($template['id'], $page['id']));
 
         // 3. Parent and child blocks
-        $row = $blocks->create(['page_id' => $page['id'], 'type' => 'row']);
-        $column = $blocks->create(['page_id' => $page['id'], 'type' => 'column', 'parent_id' => $row['id']]);
+        $row = $blocks->create(['page_id' => $page['id'], 'type' => 'flex']);
+        $column = $blocks->create(['page_id' => $page['id'], 'type' => 'grid', 'parent_id' => $row['id']]);
 
         // 4. A widget instance with JSON config on each block
         $heroConfig = ['title' => 'Welcome', 'buttons' => [['label' => 'Start', 'url' => '/start']]];

@@ -51,7 +51,13 @@ trait ManagesPageState
     public function update(string|int $id, array $data): ?array
     {
         if (!array_key_exists('status', $data)) {
-            return parent::update($id, $data);
+            $page = $this->model->find($id);
+            if (!$page) {
+                return null;
+            }
+            $page->update($data);
+            $this->bumpTreeVersion($id);
+            return $page->fresh()->toArray();
         }
 
         $status = $data['status'] instanceof PublishState ? $data['status'] : PublishState::from($data['status']);
@@ -71,6 +77,7 @@ trait ManagesPageState
         $this->atomically(function () use ($page, $data, $status, $changesStatus) {
             if ($data !== []) {
                 $page->update($data);
+                $this->bumpTreeVersion($page->getKey());
             }
             if ($changesStatus) {
                 $this->applyTransition($page, $status, null);
@@ -96,6 +103,7 @@ trait ManagesPageState
 
         $page->seo = $seo;
         $page->save();
+        $this->bumpTreeVersion($id);
         return $this->find($id);
     }
 
@@ -108,6 +116,18 @@ trait ManagesPageState
     public function getSeo(string|int $id): ?SEO
     {
         return $this->model->find($id)?->seo;
+    }
+
+    /**
+     * Increment a page's tree_version after a change to content that is
+     * part of its snapshot (blocks, widgets, SEO, metatags, template, fields).
+     *
+     * @param string|int $id
+     * @return void
+     */
+    protected function bumpTreeVersion(string|int $id): void
+    {
+        $this->model->newQuery()->whereKey($id)->increment('tree_version');
     }
 
     /**

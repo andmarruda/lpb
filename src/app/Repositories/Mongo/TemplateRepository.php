@@ -54,7 +54,9 @@ class TemplateRepository extends BaseRepository implements TemplateRepositoryInt
     {
         $deleted = parent::delete($id);
         if ($deleted) {
-            $this->pages->where('template_id', (string) $id)->update(['template_id' => null, 'template_slug' => null]);
+            $pages = $this->pages->where('template_id', (string) $id);
+            $pages->clone()->increment('tree_version');
+            $pages->update(['template_id' => null, 'template_slug' => null]);
         }
         return $deleted;
     }
@@ -126,6 +128,7 @@ class TemplateRepository extends BaseRepository implements TemplateRepositoryInt
 
         $page->template_id = (string) $template->getKey();
         $page->template_slug = $template->slug;
+        $page->tree_version = ($page->tree_version ?? 0) + 1;
         $page->save();
         return true;
     }
@@ -145,6 +148,7 @@ class TemplateRepository extends BaseRepository implements TemplateRepositoryInt
 
         $page->template_id = null;
         $page->template_slug = null;
+        $page->tree_version = ($page->tree_version ?? 0) + 1;
         $page->save();
         return true;
     }

@@ -13,12 +13,13 @@ return new class extends Migration {
         Schema::create('lpb_pages', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->string('title');
-            $table->text('extra_css')->nullable();
-            $table->text('extra_js')->nullable();
             $table->string('slug')->unique('uq_pages_slug');
             $table->enum('status', ['draft','published','archived'])->default('draft');
             $table->uuid('template_id')->nullable();
             $table->json('seo')->nullable();
+            $table->unsignedInteger('tree_version')->default(0);
+            // No foreign key: revisions are pruned (ADR 08)
+            $table->char('published_revision_id', 26)->nullable();
             $table->timestamps();
 
             $table->foreign('template_id', 'fk_pages_template')

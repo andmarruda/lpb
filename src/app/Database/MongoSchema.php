@@ -7,6 +7,7 @@ use Andmarruda\Lpb\Models\Mongo\Menu;
 use Andmarruda\Lpb\Models\Mongo\Page;
 use Andmarruda\Lpb\Models\Mongo\Revision;
 use Andmarruda\Lpb\Models\Mongo\Template;
+use Andmarruda\Lpb\Tree\BlockType;
 use Andmarruda\Lpb\ValueObjects\PublishState;
 use Andmarruda\Lpb\ValueObjects\TemplateStatus;
 
@@ -47,14 +48,23 @@ final class MongoSchema
                         'name' => $string,
                         'content' => $string,
                     ]),
-                    'blocks' => self::listOf([$embeddedId, 'type', 'order', 'widget_instances'], [
+                    'tree_version' => ['bsonType' => ['int', 'long'], 'minimum' => 0],
+                    'published_revision_id' => $nullableString,
+                    'block_ids' => ['bsonType' => 'array', 'items' => $string],
+                    // $jsonSchema cannot describe a recursive tree: only root
+                    // blocks and their widgets are checked here; the
+                    // repositories validate every level before writing
+                    'blocks' => self::listOf([$embeddedId, 'type', 'order', 'widgets', 'children'], [
                         $embeddedId => $string,
-                        'parent_id' => $nullableString,
-                        'type' => $string,
+                        'type' => ['enum' => BlockType::values()],
                         'order' => $order,
-                        'widget_instances' => self::listOf([$embeddedId, 'widget', 'order'], [
+                        'styles' => ['bsonType' => 'array'],
+                        'children' => ['bsonType' => 'array'],
+                        'widgets' => self::listOf([$embeddedId, 'widget', 'schema_version', 'order'], [
                             $embeddedId => $string,
                             'widget' => $string,
+                            'schema_version' => ['bsonType' => ['int', 'long'], 'minimum' => 1],
+                            'styles' => ['bsonType' => 'array'],
                             'order' => $order,
                         ]),
                     ]),
@@ -63,7 +73,7 @@ final class MongoSchema
                     ['key' => ['slug' => 1], 'name' => 'uq_pages_slug', 'unique' => true],
                     ['key' => ['status' => 1], 'name' => 'idx_pages_status'],
                     ['key' => ['template_id' => 1], 'name' => 'idx_pages_template'],
-                    ['key' => ["blocks.{$embeddedId}" => 1], 'name' => 'idx_pages_blocks_id'],
+                    ['key' => ['block_ids' => 1], 'name' => 'idx_pages_block_ids'],
                 ],
             ],
             (new Template())->getTable() => [
@@ -126,6 +136,7 @@ final class MongoSchema
                     'revisionable_id' => $string,
                     'payload' => ['bsonType' => ['object', 'array']],
                     'status' => ['enum' => array_column(PublishState::cases(), 'value')],
+                    'tree_version' => ['bsonType' => ['int', 'long'], 'minimum' => 0],
                     'created_by' => $nullableString,
                 ]),
                 'indexes' => [

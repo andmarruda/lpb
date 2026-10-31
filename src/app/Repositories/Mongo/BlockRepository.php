@@ -7,15 +7,16 @@ use Andmarruda\Lpb\Repositories\Concerns\GuardsParents;
 use Andmarruda\Lpb\Repositories\Concerns\ValidatesBlocks;
 use Andmarruda\Lpb\Contracts\BlockRepositoryInterface;
 use Andmarruda\Lpb\Exceptions\InvalidRelationException;
-use Illuminate\Support\Str;
+use Andmarruda\Lpb\Support\Ulid;
 
 /**
  * MongoDB implementation of the Block repository.
  *
- * Blocks and their widget instances are embedded in the page document's
- * blocks array, each with a generated id; children reference their parent
- * through parent_id. Every write rewrites the page's blocks array, so
- * concurrent writes to the same page can overwrite each other.
+ * Blocks and their widget instances are embedded in the page document as a
+ * nested tree (see EmbeddedBlocks). Writes edit a flat view of the tree and
+ * store it back nested, incrementing the page's tree_version; concurrent
+ * node-level writes to the same page can overwrite each other (saveTree is
+ * the concurrency-safe way to edit a tree).
  */
 class BlockRepository implements BlockRepositoryInterface
 {
@@ -38,26 +39,26 @@ class BlockRepository implements BlockRepositoryInterface
      */
     public function find(string|int $id): ?array
     {
-        [$page, $index] = $this->locate($id);
-        return $page ? EmbeddedBlocks::present($this->pageId($page), $page->blocks[$index]) : null;
+        [$page, $blocks, $index] = $this->locate($id);
+        return $page ? EmbeddedBlocks::present($this->pageId($page), $blocks[$index]) : null;
     }
 
     /**
      * Retrieve all blocks with their widget instances.
      *
-     * @return array Blocks grouped by page, ordered by order and insertion
+     * @return array Blocks grouped by page, ordered by order and id
      */
     public function all(): array
     {
         return $this->pages->whereNotNull('blocks')->get()
-            ->flatMap(fn (Page $page) => EmbeddedBlocks::presentAll($this->pageId($page), $page->blocks ?? []))
+            ->flatMap(fn (Page $page) => EmbeddedBlocks::presentAll($this->pageId($page), EmbeddedBlocks::flat($page)))
             ->all();
     }
 
     /**
      * Create a block on a page.
      *
-     * @param array $data page_id and type are required; parent_id and order are optional
+     * @param array $data page_id and type are required; id (a client-generated ULID), parent_id, order and styles are optional
      * @return array The created block as array
      */
     public function create(array $data): array
@@ -69,27 +70,34 @@ class BlockRepository implements BlockRepositoryInterface
         }
 
         $attributes = $this->blockAttributes($data, true);
-        $blocks = $page->blocks ?? [];
-        $parentId = isset($attributes['parent_id']) ? (string) $attributes['parent_id'] : null;
+        $id = $this->newBlockId($data);
+        $blocks = EmbeddedBlocks::flat($page);
+        if (in_array($id, array_column($blocks, 'id'), true)) {
+            throw new InvalidRelationException("Block '{$id}' already exists.");
+        }
+
+        $parentId = $attributes['parent_id'] ?? null;
         if ($parentId !== null) {
             $this->assertEmbeddedParent($blocks, $parentId, null, 'block');
         }
 
         $block = [
-            'id' => $this->newId(),
+            'id' => $id,
             'parent_id' => $parentId,
             'type' => $attributes['type'],
             'order' => $attributes['order'] ?? 0,
+            'styles' => $attributes['styles'],
             'widget_instances' => [],
         ];
         $blocks[] = $block;
-        $this->saveBlocks($page, $blocks);
+        $this->assertWithinLimits($blocks);
+        EmbeddedBlocks::store($page, $blocks);
 
         return EmbeddedBlocks::present($this->pageId($page), $block);
     }
 
     /**
-     * Update the type, order or parent of a block.
+     * Update the type, order, parent or styles of a block.
      *
      * @param string|int $id The block identifier
      * @param array $data The data to update; other keys are ignored
@@ -97,22 +105,19 @@ class BlockRepository implements BlockRepositoryInterface
      */
     public function update(string|int $id, array $data): ?array
     {
-        [$page, $index] = $this->locate($id);
+        [$page, $blocks, $index] = $this->locate($id);
         if (!$page) {
             return null;
         }
 
         $attributes = $this->blockAttributes($data, false);
-        $blocks = $page->blocks;
-        if (array_key_exists('parent_id', $attributes)) {
-            $attributes['parent_id'] = $attributes['parent_id'] === null ? null : (string) $attributes['parent_id'];
-            if ($attributes['parent_id'] !== null) {
-                $this->assertEmbeddedParent($blocks, $attributes['parent_id'], (string) $id, 'block');
-            }
+        if (($attributes['parent_id'] ?? null) !== null) {
+            $this->assertEmbeddedParent($blocks, $attributes['parent_id'], $blocks[$index]['id'], 'block');
         }
 
         $blocks[$index] = array_merge($blocks[$index], $attributes);
-        $this->saveBlocks($page, $blocks);
+        $this->assertWithinLimits($blocks);
+        EmbeddedBlocks::store($page, $blocks);
 
         return EmbeddedBlocks::present($this->pageId($page), $blocks[$index]);
     }
@@ -125,21 +130,21 @@ class BlockRepository implements BlockRepositoryInterface
      */
     public function delete(string|int $id): bool
     {
-        [$page, $index] = $this->locate($id);
+        [$page, $blocks, $index] = $this->locate($id);
         if (!$page) {
             return false;
         }
 
-        $blocks = $page->blocks;
+        $deleted = $blocks[$index]['id'];
         array_splice($blocks, $index, 1);
         foreach ($blocks as &$block) {
-            if (($block['parent_id'] ?? null) === (string) $id) {
+            if (($block['parent_id'] ?? null) === $deleted) {
                 $block['parent_id'] = null;
             }
         }
         unset($block);
 
-        $this->saveBlocks($page, $blocks);
+        EmbeddedBlocks::store($page, $blocks);
         return true;
     }
 
@@ -147,42 +152,39 @@ class BlockRepository implements BlockRepositoryInterface
      * Retrieve the blocks of a page.
      *
      * @param string|int $pageId The page identifier
-     * @return array Blocks ordered by order, then insertion
+     * @return array Blocks ordered by order, then id
      */
     public function getForPage(string|int $pageId): array
     {
         $page = $this->pages->find($pageId);
-        return $page ? EmbeddedBlocks::presentAll($this->pageId($page), $page->blocks ?? []) : [];
+        return $page ? EmbeddedBlocks::presentAll($this->pageId($page), EmbeddedBlocks::flat($page)) : [];
     }
 
     /**
      * Add a widget instance to a block.
      *
      * @param string|int $blockId The block identifier
-     * @param string $widget Widget class name or registered alias
+     * @param string $widget Registered widget name
      * @param array $config Widget configuration
      * @param int $order Position inside the block
+     * @param array $styles Style variants
      * @return array The created widget instance as array
      */
-    public function addWidgetInstance(string|int $blockId, string $widget, array $config, int $order = 0): array
+    public function addWidgetInstance(string|int $blockId, string $widget, array $config, int $order = 0, array $styles = []): array
     {
-        [$page, $index] = $this->locate($blockId);
+        [$page, $blocks, $index] = $this->locate($blockId);
         if (!$page) {
             throw new InvalidRelationException("Block '{$blockId}' not found.");
         }
-        $this->assertWidget($widget);
 
-        $instance = [
-            'id' => $this->newId(),
-            'widget' => $widget,
-            'config' => $config,
-            'order' => $this->validOrder($order),
-        ];
-        $blocks = $page->blocks;
+        $instance = ['id' => Ulid::generate()]
+            + $this->widgetInstanceAttributes($widget, $config, $styles)
+            + ['order' => $this->validOrder($order)];
         $blocks[$index]['widget_instances'][] = $instance;
-        $this->saveBlocks($page, $blocks);
+        $this->assertWithinLimits($blocks);
+        EmbeddedBlocks::store($page, $blocks);
 
-        return EmbeddedBlocks::presentWidgetInstance((string) $blockId, $instance);
+        return EmbeddedBlocks::presentWidgetInstance($blocks[$index]['id'], $instance);
     }
 
     /**
@@ -195,16 +197,17 @@ class BlockRepository implements BlockRepositoryInterface
      */
     public function updateWidgetInstance(string|int $blockId, string|int $widgetInstanceId, array $config): ?array
     {
-        [$page, $index, $instanceIndex] = $this->locateWidgetInstance($blockId, $widgetInstanceId);
+        [$page, $blocks, $index, $instanceIndex] = $this->locateWidgetInstance($blockId, $widgetInstanceId);
         if (!$page) {
             return null;
         }
 
-        $blocks = $page->blocks;
-        $blocks[$index]['widget_instances'][$instanceIndex]['config'] = $config;
-        $this->saveBlocks($page, $blocks);
+        $instance = &$blocks[$index]['widget_instances'][$instanceIndex];
+        $instance = array_merge($instance, $this->widgetInstanceAttributes($instance['widget'], $config, null));
+        unset($instance);
+        EmbeddedBlocks::store($page, $blocks);
 
-        return EmbeddedBlocks::presentWidgetInstance((string) $blockId, $blocks[$index]['widget_instances'][$instanceIndex]);
+        return EmbeddedBlocks::presentWidgetInstance($blocks[$index]['id'], $blocks[$index]['widget_instances'][$instanceIndex]);
     }
 
     /**
@@ -216,14 +219,13 @@ class BlockRepository implements BlockRepositoryInterface
      */
     public function removeWidgetInstance(string|int $blockId, string|int $widgetInstanceId): bool
     {
-        [$page, $index, $instanceIndex] = $this->locateWidgetInstance($blockId, $widgetInstanceId);
+        [$page, $blocks, $index, $instanceIndex] = $this->locateWidgetInstance($blockId, $widgetInstanceId);
         if (!$page) {
             return false;
         }
 
-        $blocks = $page->blocks;
         array_splice($blocks[$index]['widget_instances'], $instanceIndex, 1);
-        $this->saveBlocks($page, $blocks);
+        EmbeddedBlocks::store($page, $blocks);
         return true;
     }
 
@@ -241,10 +243,9 @@ class BlockRepository implements BlockRepositoryInterface
             return false;
         }
 
-        $positions = array_flip(array_map('strval', array_values($orderedBlockIds)));
-        $blocks = $page->blocks ?? [];
-        $known = array_column($blocks, 'id');
-        if (count($positions) !== count($orderedBlockIds) || array_diff(array_keys($positions), $known) !== []) {
+        $positions = array_flip(array_map(fn ($id) => Ulid::normalize((string) $id), array_values($orderedBlockIds)));
+        $blocks = EmbeddedBlocks::flat($page);
+        if (count($positions) !== count($orderedBlockIds) || array_diff(array_keys($positions), array_column($blocks, 'id')) !== []) {
             return false;
         }
 
@@ -255,64 +256,53 @@ class BlockRepository implements BlockRepositoryInterface
         }
         unset($block);
 
-        $this->saveBlocks($page, $blocks);
+        EmbeddedBlocks::store($page, $blocks);
         return true;
     }
 
     /**
-     * Find the page holding a block and the block's index in its blocks array.
+     * Find the page holding a block, its flat blocks and the block's index in them.
      *
      * @param string|int $blockId
-     * @return array{0: Page|null, 1: int|null}
+     * @return array{0: Page|null, 1: array, 2: int|null}
      */
     protected function locate(string|int $blockId): array
     {
-        $page = $this->pages->where('blocks.id', (string) $blockId)->first();
-        $index = $page ? array_search((string) $blockId, array_column($page->blocks, 'id'), true) : false;
-        return $index === false ? [null, null] : [$page, $index];
+        $blockId = Ulid::normalize((string) $blockId);
+        $page = $this->pages->where('block_ids', $blockId)->first();
+        if (!$page) {
+            return [null, [], null];
+        }
+
+        $blocks = EmbeddedBlocks::flat($page);
+        $index = array_search($blockId, array_column($blocks, 'id'), true);
+        return $index === false ? [null, [], null] : [$page, $blocks, $index];
     }
 
     /**
-     * Find the page, block index and widget instance index of a widget instance.
+     * Find the page, flat blocks, block index and widget instance index of a widget instance.
      *
      * @param string|int $blockId
      * @param string|int $widgetInstanceId
-     * @return array{0: Page|null, 1: int|null, 2: int|null}
+     * @return array{0: Page|null, 1: array, 2: int|null, 3: int|null}
      */
     protected function locateWidgetInstance(string|int $blockId, string|int $widgetInstanceId): array
     {
-        [$page, $index] = $this->locate($blockId);
+        [$page, $blocks, $index] = $this->locate($blockId);
         if (!$page) {
-            return [null, null, null];
+            return [null, [], null, null];
         }
 
         $instanceIndex = array_search(
-            (string) $widgetInstanceId,
-            array_column($page->blocks[$index]['widget_instances'] ?? [], 'id'),
+            Ulid::normalize((string) $widgetInstanceId),
+            array_column($blocks[$index]['widget_instances'], 'id'),
             true
         );
-        return $instanceIndex === false ? [null, null, null] : [$page, $index, $instanceIndex];
-    }
-
-    protected function saveBlocks(Page $page, array $blocks): void
-    {
-        $page->blocks = array_values($blocks);
-        $page->save();
+        return $instanceIndex === false ? [null, [], null, null] : [$page, $blocks, $index, $instanceIndex];
     }
 
     protected function pageId(Page $page): string
     {
         return (string) $page->getKey();
-    }
-
-    /**
-     * Embedded ids are ULIDs: laravel-mongodb casts 24-hex strings queried on
-     * "blocks._id" to ObjectId, which would never match an id stored as a string.
-     *
-     * @return string
-     */
-    protected function newId(): string
-    {
-        return (string) Str::ulid();
     }
 }

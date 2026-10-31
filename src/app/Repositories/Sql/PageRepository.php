@@ -120,6 +120,7 @@ class PageRepository extends BaseRepository implements PageRepositoryInterface
         }
 
         $page->metatags()->updateOrCreate(['name' => $name], ['content' => $content]);
+        $this->bumpTreeVersion($pageId);
 
         return $this->withContent($page);
     }

@@ -4,19 +4,21 @@ namespace Andmarruda\Lpb\Tests\Feature\Mongo;
 
 use Tests\TestCase;
 use Andmarruda\Lpb\Tests\Feature\Concerns\ComparesStoredArrays;
+use Andmarruda\Lpb\Tests\Feature\Concerns\TreeStorageScenario;
 use Andmarruda\Lpb\Contracts\BlockRepositoryInterface;
 use Andmarruda\Lpb\Exceptions\InvalidRelationException;
 use Andmarruda\Lpb\Exceptions\InvalidValueException;
 use Andmarruda\Lpb\Repositories\Mongo\BlockRepository;
 use Andmarruda\Lpb\Repositories\Mongo\PageRepository;
 use Andmarruda\Lpb\Models\Mongo\Page;
+use Andmarruda\Lpb\Models\Mongo\Template;
 
 /**
  * MongoDB BlockRepository integration tests
  */
 class BlockIntegrationTest extends TestCase
 {
-    use ComparesStoredArrays;
+    use ComparesStoredArrays, TreeStorageScenario;
 
     protected BlockRepository $repository;
     protected PageRepository $pages;
@@ -26,6 +28,7 @@ class BlockIntegrationTest extends TestCase
         parent::setUp();
 
         Page::truncate();
+        Template::truncate();
 
         $this->repository = new BlockRepository(new Page());
         $this->pages = new PageRepository(new Page());
@@ -34,6 +37,7 @@ class BlockIntegrationTest extends TestCase
     protected function tearDown(): void
     {
         Page::truncate();
+        Template::truncate();
 
         parent::tearDown();
     }
@@ -58,11 +62,11 @@ class BlockIntegrationTest extends TestCase
     {
         $page = $this->createPage();
 
-        $block = $this->repository->create(['page_id' => $page['id'], 'type' => 'row']);
+        $block = $this->repository->create(['page_id' => $page['id'], 'type' => 'flex']);
 
         $this->assertSame($page['id'], $block['page_id']);
         $this->assertNull($block['parent_id']);
-        $this->assertSame('row', $block['type']);
+        $this->assertSame('flex', $block['type']);
         $this->assertSame(0, $block['order']);
         $this->assertSame([], $block['widget_instances']);
         $this->assertSame($block['id'], $this->repository->find($block['id'])['id']);
@@ -77,7 +81,7 @@ class BlockIntegrationTest extends TestCase
         $page = $this->createPage();
 
         try {
-            $this->repository->create(['page_id' => '000000000000000000000000', 'type' => 'row']);
+            $this->repository->create(['page_id' => '000000000000000000000000', 'type' => 'flex']);
             $this->fail('Block was created on a missing page');
         } catch (InvalidRelationException) {
         }
@@ -92,9 +96,9 @@ class BlockIntegrationTest extends TestCase
     public function test_nested_blocks(): void
     {
         $page = $this->createPage();
-        $row = $this->repository->create(['page_id' => $page['id'], 'type' => 'row']);
+        $row = $this->repository->create(['page_id' => $page['id'], 'type' => 'flex']);
 
-        $column = $this->repository->create(['page_id' => $page['id'], 'type' => 'column', 'parent_id' => $row['id']]);
+        $column = $this->repository->create(['page_id' => $page['id'], 'type' => 'grid', 'parent_id' => $row['id']]);
 
         $this->assertSame($row['id'], $column['parent_id']);
     }
@@ -104,11 +108,11 @@ class BlockIntegrationTest extends TestCase
      */
     public function test_rejects_parent_from_another_page(): void
     {
-        $other = $this->repository->create(['page_id' => $this->createPage('other')['id'], 'type' => 'row']);
+        $other = $this->repository->create(['page_id' => $this->createPage('other')['id'], 'type' => 'flex']);
         $page = $this->createPage();
 
         $this->expectException(InvalidRelationException::class);
-        $this->repository->create(['page_id' => $page['id'], 'type' => 'column', 'parent_id' => $other['id']]);
+        $this->repository->create(['page_id' => $page['id'], 'type' => 'grid', 'parent_id' => $other['id']]);
     }
 
     /**
@@ -117,8 +121,8 @@ class BlockIntegrationTest extends TestCase
     public function test_update_rejects_cycles(): void
     {
         $page = $this->createPage();
-        $row = $this->repository->create(['page_id' => $page['id'], 'type' => 'row']);
-        $column = $this->repository->create(['page_id' => $page['id'], 'type' => 'column', 'parent_id' => $row['id']]);
+        $row = $this->repository->create(['page_id' => $page['id'], 'type' => 'flex']);
+        $column = $this->repository->create(['page_id' => $page['id'], 'type' => 'grid', 'parent_id' => $row['id']]);
 
         try {
             $this->repository->update($row['id'], ['parent_id' => $row['id']]);
@@ -136,21 +140,21 @@ class BlockIntegrationTest extends TestCase
     public function test_update_block(): void
     {
         $page = $this->createPage();
-        $row = $this->repository->create(['page_id' => $page['id'], 'type' => 'row']);
-        $column = $this->repository->create(['page_id' => $page['id'], 'type' => 'column', 'parent_id' => $row['id']]);
+        $row = $this->repository->create(['page_id' => $page['id'], 'type' => 'flex']);
+        $column = $this->repository->create(['page_id' => $page['id'], 'type' => 'grid', 'parent_id' => $row['id']]);
 
         $updated = $this->repository->update($column['id'], [
-            'type' => 'custom',
+            'type' => 'flex',
             'order' => 3,
             'parent_id' => null,
             'page_id' => $this->createPage('other')['id'],
         ]);
 
-        $this->assertSame('custom', $updated['type']);
+        $this->assertSame('flex', $updated['type']);
         $this->assertSame(3, $updated['order']);
         $this->assertNull($updated['parent_id']);
         $this->assertSame($page['id'], $updated['page_id']);
-        $this->assertNull($this->repository->update('missing-block', ['type' => 'row']));
+        $this->assertNull($this->repository->update('missing-block', ['type' => 'flex']));
     }
 
     /**
@@ -161,7 +165,7 @@ class BlockIntegrationTest extends TestCase
         $page = $this->createPage();
 
         $this->expectException(InvalidValueException::class);
-        $this->repository->create(['page_id' => $page['id'], 'type' => 'row', 'order' => -1]);
+        $this->repository->create(['page_id' => $page['id'], 'type' => 'flex', 'order' => -1]);
     }
 
     /**
@@ -170,12 +174,12 @@ class BlockIntegrationTest extends TestCase
     public function test_get_for_page_orders_blocks(): void
     {
         $page = $this->createPage();
-        $this->repository->create(['page_id' => $page['id'], 'type' => 'footer', 'order' => 2]);
-        $this->repository->create(['page_id' => $page['id'], 'type' => 'hero', 'order' => 1]);
-        $this->repository->create(['page_id' => $page['id'], 'type' => 'body', 'order' => 1]);
-        $this->repository->create(['page_id' => $this->createPage('other')['id'], 'type' => 'elsewhere']);
+        $footer = $this->repository->create(['page_id' => $page['id'], 'type' => 'flex', 'order' => 2]);
+        $hero = $this->repository->create(['page_id' => $page['id'], 'type' => 'flex', 'order' => 1]);
+        $body = $this->repository->create(['page_id' => $page['id'], 'type' => 'grid', 'order' => 1]);
+        $this->repository->create(['page_id' => $this->createPage('other')['id'], 'type' => 'flex']);
 
-        $this->assertSame(['hero', 'body', 'footer'], array_column($this->repository->getForPage($page['id']), 'type'));
+        $this->assertSame([$hero['id'], $body['id'], $footer['id']], array_column($this->repository->getForPage($page['id']), 'id'));
         $this->assertSame([], $this->repository->getForPage('000000000000000000000000'));
         $this->assertCount(4, $this->repository->all());
     }
@@ -186,7 +190,7 @@ class BlockIntegrationTest extends TestCase
     public function test_widget_instance_lifecycle(): void
     {
         $page = $this->createPage();
-        $block = $this->repository->create(['page_id' => $page['id'], 'type' => 'row']);
+        $block = $this->repository->create(['page_id' => $page['id'], 'type' => 'flex']);
         $config = ['title' => 'Welcome', 'buttons' => [['label' => 'Go', 'url' => '/go']]];
 
         $instance = $this->repository->addWidgetInstance($block['id'], 'App\\Widgets\\Hero', $config, 1);
@@ -212,7 +216,7 @@ class BlockIntegrationTest extends TestCase
     public function test_widget_instances_are_ordered(): void
     {
         $page = $this->createPage();
-        $block = $this->repository->create(['page_id' => $page['id'], 'type' => 'row']);
+        $block = $this->repository->create(['page_id' => $page['id'], 'type' => 'flex']);
         $this->repository->addWidgetInstance($block['id'], 'footer', [], 2);
         $this->repository->addWidgetInstance($block['id'], 'hero', [], 0);
 
@@ -225,8 +229,8 @@ class BlockIntegrationTest extends TestCase
     public function test_widget_instance_requires_matching_block(): void
     {
         $page = $this->createPage();
-        $first = $this->repository->create(['page_id' => $page['id'], 'type' => 'row']);
-        $second = $this->repository->create(['page_id' => $page['id'], 'type' => 'row']);
+        $first = $this->repository->create(['page_id' => $page['id'], 'type' => 'flex']);
+        $second = $this->repository->create(['page_id' => $page['id'], 'type' => 'flex']);
         $instance = $this->repository->addWidgetInstance($first['id'], 'hero', []);
 
         $this->assertNull($this->repository->updateWidgetInstance($second['id'], $instance['id'], []));
@@ -242,18 +246,18 @@ class BlockIntegrationTest extends TestCase
     public function test_reorder(): void
     {
         $page = $this->createPage();
-        $a = $this->repository->create(['page_id' => $page['id'], 'type' => 'a']);
-        $b = $this->repository->create(['page_id' => $page['id'], 'type' => 'b']);
-        $c = $this->repository->create(['page_id' => $page['id'], 'type' => 'c']);
-        $foreign = $this->repository->create(['page_id' => $this->createPage('other')['id'], 'type' => 'x']);
+        $a = $this->repository->create(['page_id' => $page['id'], 'type' => 'flex']);
+        $b = $this->repository->create(['page_id' => $page['id'], 'type' => 'flex']);
+        $c = $this->repository->create(['page_id' => $page['id'], 'type' => 'flex']);
+        $foreign = $this->repository->create(['page_id' => $this->createPage('other')['id'], 'type' => 'flex']);
 
         $this->assertTrue($this->repository->reorder($page['id'], [$c['id'], $a['id'], $b['id']]));
-        $this->assertSame(['c', 'a', 'b'], array_column($this->repository->getForPage($page['id']), 'type'));
+        $this->assertSame([$c['id'], $a['id'], $b['id']], array_column($this->repository->getForPage($page['id']), 'id'));
 
         $this->assertFalse($this->repository->reorder($page['id'], [$a['id'], $a['id']]));
         $this->assertFalse($this->repository->reorder($page['id'], [$b['id'], $foreign['id']]));
         $this->assertFalse($this->repository->reorder('000000000000000000000000', []));
-        $this->assertSame(['c', 'a', 'b'], array_column($this->repository->getForPage($page['id']), 'type'));
+        $this->assertSame([$c['id'], $a['id'], $b['id']], array_column($this->repository->getForPage($page['id']), 'id'));
     }
 
     /**
@@ -262,8 +266,8 @@ class BlockIntegrationTest extends TestCase
     public function test_delete_block(): void
     {
         $page = $this->createPage();
-        $row = $this->repository->create(['page_id' => $page['id'], 'type' => 'row']);
-        $column = $this->repository->create(['page_id' => $page['id'], 'type' => 'column', 'parent_id' => $row['id']]);
+        $row = $this->repository->create(['page_id' => $page['id'], 'type' => 'flex']);
+        $column = $this->repository->create(['page_id' => $page['id'], 'type' => 'grid', 'parent_id' => $row['id']]);
         $instance = $this->repository->addWidgetInstance($row['id'], 'hero', []);
 
         $this->assertTrue($this->repository->delete($row['id']));
@@ -280,7 +284,7 @@ class BlockIntegrationTest extends TestCase
     public function test_page_with_blocks(): void
     {
         $page = $this->createPage();
-        $block = $this->repository->create(['page_id' => $page['id'], 'type' => 'row']);
+        $block = $this->repository->create(['page_id' => $page['id'], 'type' => 'flex']);
         $this->repository->addWidgetInstance($block['id'], 'hero', ['title' => 'Welcome']);
 
         $result = $this->pages->withBlocks($page['id']);
@@ -295,7 +299,7 @@ class BlockIntegrationTest extends TestCase
     public function test_delete_page_removes_blocks(): void
     {
         $page = $this->createPage();
-        $block = $this->repository->create(['page_id' => $page['id'], 'type' => 'row']);
+        $block = $this->repository->create(['page_id' => $page['id'], 'type' => 'flex']);
 
         $this->pages->delete($page['id']);
 

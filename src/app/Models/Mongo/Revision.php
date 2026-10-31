@@ -20,12 +20,14 @@ class Revision extends Model
         'revisionable_id',
         'payload',
         'status',
+        'tree_version',
         'created_by',
     ];
 
     // payload has no cast so it is stored as an embedded document.
     protected $casts = [
         'status' => PublishState::class,
+        'tree_version' => 'integer',
     ];
 
     /**

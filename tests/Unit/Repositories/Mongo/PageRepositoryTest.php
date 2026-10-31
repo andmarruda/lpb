@@ -151,6 +151,11 @@ class PageRepositoryTest extends TestCase
             ->with($id)
             ->andReturn($pageMock);
 
+        $queryMock = Mockery::mock();
+        $queryMock->shouldReceive('whereKey')->once()->with($id)->andReturnSelf();
+        $queryMock->shouldReceive('increment')->once()->with('tree_version');
+        $this->modelMock->shouldReceive('newQuery')->once()->andReturn($queryMock);
+
         $result = $this->repository->update($id, $data);
 
         $this->assertNotNull($result);
@@ -313,8 +318,8 @@ class PageRepositoryTest extends TestCase
      * Test withBlocks returns embedded blocks without eager loading
      *
      * In MongoDB, blocks are embedded in the page document, so find() is
-     * called directly without with(). Blocks are ordered and gain page_id,
-     * and widget instances gain block_id.
+     * called directly without with(). The nested tree is flattened: blocks
+     * are ordered and gain page_id and parent_id, widget instances gain block_id.
      */
     public function test_with_blocks_returns_embedded_blocks_without_eager_loading(): void
     {
@@ -326,15 +331,16 @@ class PageRepositoryTest extends TestCase
                 'id' => $id,
                 'title' => 'Home',
                 'blocks' => [
-                    ['id' => 'b2', 'parent_id' => null, 'type' => 'column', 'order' => 1, 'widget_instances' => []],
+                    ['id' => 'b2', 'type' => 'grid', 'order' => 1, 'styles' => [], 'widgets' => [], 'children' => []],
                     [
                         'id' => 'b1',
-                        'parent_id' => null,
-                        'type' => 'row',
+                        'type' => 'flex',
                         'order' => 0,
-                        'widget_instances' => [
-                            ['id' => 'w1', 'widget' => 'hero', 'config' => ['title' => 'Welcome'], 'order' => 0]
-                        ]
+                        'styles' => [],
+                        'widgets' => [
+                            ['id' => 'w1', 'widget' => 'hero', 'schema_version' => 1, 'config' => ['title' => 'Welcome'], 'styles' => [], 'order' => 0]
+                        ],
+                        'children' => [],
                     ],
                 ]
             ]);
@@ -485,6 +491,11 @@ class PageRepositoryTest extends TestCase
             ->once()
             ->with($pageId)
             ->andReturn($pageMock);
+
+        $queryMock = Mockery::mock();
+        $queryMock->shouldReceive('whereKey')->once()->with($pageId)->andReturnSelf();
+        $queryMock->shouldReceive('increment')->once()->with('tree_version');
+        $this->modelMock->shouldReceive('newQuery')->once()->andReturn($queryMock);
 
         $result = $this->repository->setMetatag($pageId, $name, $content);
 
