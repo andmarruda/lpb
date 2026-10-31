@@ -11,6 +11,8 @@ use Andmarruda\Lpb\Lpb;
 use Andmarruda\Lpb\Widgets\WidgetRegistry;
 use Andmarruda\Lpb\Contracts\PageRepositoryInterface;
 use Andmarruda\Lpb\Contracts\PageTreeRepositoryInterface;
+use Andmarruda\Lpb\Contracts\PublishingServiceInterface;
+use Andmarruda\Lpb\Publishing\PublishingService;
 use Andmarruda\Lpb\Contracts\BlockRepositoryInterface;
 use Andmarruda\Lpb\Contracts\MenuRepositoryInterface;
 use Andmarruda\Lpb\Contracts\MediaRepositoryInterface;
@@ -50,6 +52,7 @@ class DatabaseAbstractionServiceProvider extends ServiceProvider
         }
 
         $this->app->singleton(WidgetRegistry::class);
+        $this->app->bind(PublishingServiceInterface::class, PublishingService::class);
         $this->app->singleton(Lpb::class);
     }
 

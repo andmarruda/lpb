@@ -4,7 +4,6 @@ namespace Andmarruda\Lpb\Tests\Feature\Sql;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
-use ValueError;
 use Andmarruda\Lpb\Exceptions\InvalidValueException;
 use Andmarruda\Lpb\Repositories\Sql\PageRepository;
 use Andmarruda\Lpb\Models\Sql\Page;
@@ -43,7 +42,8 @@ class PageValueObjectIntegrationTest extends TestCase
      */
     public function test_status_accepts_enum(): void
     {
-        $result = $this->repository->create(['title' => 'Home', 'slug' => 'home', 'status' => PublishState::Published]);
+        $page = $this->repository->create(['title' => 'Home', 'slug' => 'home', 'status' => PublishState::Draft]);
+        $result = $this->repository->setPublication($page['id'], PublishState::Published, null);
 
         $this->assertSame('published', $result['status']);
         $this->assertCount(1, $this->repository->getByStatus(PublishState::Published));
@@ -51,11 +51,17 @@ class PageValueObjectIntegrationTest extends TestCase
     }
 
     /**
-     * Test an unknown status is rejected
+     * Test an unknown or non-draft status is rejected on create
      */
     public function test_rejects_unknown_status(): void
     {
-        $this->expectException(ValueError::class);
+        try {
+            $this->repository->create(['title' => 'Home', 'slug' => 'home', 'status' => 'published']);
+            $this->fail('A page was created as published');
+        } catch (InvalidValueException) {
+        }
+
+        $this->expectException(InvalidValueException::class);
 
         $this->repository->create(['title' => 'Home', 'slug' => 'home', 'status' => 'deleted']);
     }

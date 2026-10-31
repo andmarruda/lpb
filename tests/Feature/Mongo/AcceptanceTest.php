@@ -12,9 +12,9 @@ use Andmarruda\Lpb\Repositories\Mongo\PageRepository;
 use Andmarruda\Lpb\Tests\Feature\Concerns\AcceptanceScenario;
 
 /**
- * Phase 1 acceptance scenario on the MongoDB driver
+ * Acceptance scenario on the MongoDB driver
  */
-class Phase1AcceptanceTest extends TestCase
+class AcceptanceTest extends TestCase
 {
     use AcceptanceScenario, RegistersTestWidgets;
 

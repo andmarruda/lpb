@@ -8,7 +8,7 @@ use Andmarruda\Lpb\Exceptions\InvalidStateTransitionException;
  *
  * Allowed transitions:
  *   draft     -> published | archived
- *   published -> draft | archived
+ *   published -> published (publish again) | draft | archived
  *   archived  -> draft
  */
 enum PublishState: string
@@ -45,7 +45,7 @@ enum PublishState: string
     {
         return in_array($next, match ($this) {
             self::Draft => [self::Published, self::Archived],
-            self::Published => [self::Draft, self::Archived],
+            self::Published => [self::Published, self::Draft, self::Archived],
             self::Archived => [self::Draft],
         }, true);
     }

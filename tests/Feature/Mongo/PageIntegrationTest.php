@@ -4,6 +4,7 @@ namespace Andmarruda\Lpb\Tests\Feature\Mongo;
 
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
+use Andmarruda\Lpb\ValueObjects\PublishState;
 use Andmarruda\Lpb\Contracts\PageRepositoryInterface;
 use Andmarruda\Lpb\Repositories\Mongo\PageRepository;
 use Andmarruda\Lpb\Models\Mongo\Page;
@@ -40,6 +41,15 @@ class PageIntegrationTest extends TestCase
     }
 
     /**
+     * Create a page and mark it published, as the publishing service would.
+     */
+    protected function publishedPage(array $data): array
+    {
+        $page = $this->repository->create($data);
+        return $this->repository->setPublication($page['id'], PublishState::Published, null);
+    }
+
+    /**
      * Test create page with MongoDB database
      */
     public function test_create_page_with_mongodb_database(): void
@@ -47,7 +57,7 @@ class PageIntegrationTest extends TestCase
         $data = [
             'title' => 'Test Page MongoDB',
             'slug' => 'test-page-mongo',
-            'status' => 'published',
+            'status' => 'draft',
             'blocks' => [],
             'metatags' => []
         ];
@@ -65,10 +75,9 @@ class PageIntegrationTest extends TestCase
      */
     public function test_find_page_by_slug(): void
     {
-        $this->repository->create([
+        $this->publishedPage([
             'title' => 'About Us MongoDB',
             'slug' => 'about-us-mongo',
-            'status' => 'published',
             'blocks' => [],
             'metatags' => []
         ]);
@@ -85,10 +94,9 @@ class PageIntegrationTest extends TestCase
      */
     public function test_get_published_pages_only(): void
     {
-        $this->repository->create([
+        $this->publishedPage([
             'title' => 'Published Page',
             'slug' => 'published-mongo',
-            'status' => 'published',
             'blocks' => [],
             'metatags' => []
         ]);
@@ -113,10 +121,9 @@ class PageIntegrationTest extends TestCase
      */
     public function test_set_metatag_on_page(): void
     {
-        $page = $this->repository->create([
+        $page = $this->publishedPage([
             'title' => 'Page',
             'slug' => 'page-metatag',
-            'status' => 'published',
             'blocks' => [],
             'metatags' => []
         ]);
@@ -136,10 +143,9 @@ class PageIntegrationTest extends TestCase
      */
     public function test_get_metatag_from_page(): void
     {
-        $page = $this->repository->create([
+        $page = $this->publishedPage([
             'title' => 'Page',
             'slug' => 'page-get-metatag',
-            'status' => 'published',
             'blocks' => [],
             'metatags' => [
                 ['name' => 'keywords', 'content' => 'laravel, mongodb, test']

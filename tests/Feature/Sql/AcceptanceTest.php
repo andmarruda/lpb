@@ -10,9 +10,9 @@ use Andmarruda\Lpb\Repositories\Sql\PageRepository;
 use Andmarruda\Lpb\Tests\Feature\Concerns\AcceptanceScenario;
 
 /**
- * Phase 1 acceptance scenario on the SQL driver
+ * Acceptance scenario on the SQL driver
  */
-class Phase1AcceptanceTest extends TestCase
+class AcceptanceTest extends TestCase
 {
     use RefreshDatabase, AcceptanceScenario, RegistersTestWidgets;
 

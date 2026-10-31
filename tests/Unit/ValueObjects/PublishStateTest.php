@@ -29,6 +29,7 @@ class PublishStateTest extends TestCase
             'draft to archived' => [PublishState::Draft, PublishState::Archived],
             'published to draft' => [PublishState::Published, PublishState::Draft],
             'published to archived' => [PublishState::Published, PublishState::Archived],
+            'published again' => [PublishState::Published, PublishState::Published],
             'archived to draft' => [PublishState::Archived, PublishState::Draft],
         ];
     }
@@ -50,18 +51,17 @@ class PublishStateTest extends TestCase
         return [
             'archived to published' => [PublishState::Archived, PublishState::Published],
             'draft to draft' => [PublishState::Draft, PublishState::Draft],
-            'published to published' => [PublishState::Published, PublishState::Published],
             'archived to archived' => [PublishState::Archived, PublishState::Archived],
         ];
     }
 
     /**
-     * Test only draft is publishable
+     * Test draft and published pages can be published (again); archived cannot
      */
     public function test_is_publishable(): void
     {
         $this->assertTrue(PublishState::Draft->isPublishable());
-        $this->assertFalse(PublishState::Published->isPublishable());
+        $this->assertTrue(PublishState::Published->isPublishable());
         $this->assertFalse(PublishState::Archived->isPublishable());
     }
 

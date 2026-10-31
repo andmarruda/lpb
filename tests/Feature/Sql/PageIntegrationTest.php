@@ -4,6 +4,7 @@ namespace Andmarruda\Lpb\Tests\Feature\Sql;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use Andmarruda\Lpb\ValueObjects\PublishState;
 use Andmarruda\Lpb\Repositories\Sql\PageRepository;
 use Andmarruda\Lpb\Models\Sql\Page;
 
@@ -29,6 +30,15 @@ class PageIntegrationTest extends TestCase
     }
 
     /**
+     * Create a page and mark it published, as the publishing service would.
+     */
+    protected function publishedPage(array $data): array
+    {
+        $page = $this->repository->create($data);
+        return $this->repository->setPublication($page['id'], PublishState::Published, null);
+    }
+
+    /**
      * Test create page with SQL database
      */
     public function test_create_page_with_sql_database(): void
@@ -36,7 +46,7 @@ class PageIntegrationTest extends TestCase
         $data = [
             'title' => 'Test Page',
             'slug' => 'test-page',
-            'status' => 'published'
+            'status' => 'draft'
         ];
 
         $result = $this->repository->create($data);
@@ -57,10 +67,9 @@ class PageIntegrationTest extends TestCase
      */
     public function test_find_page_by_slug(): void
     {
-        $this->repository->create([
+        $this->publishedPage([
             'title' => 'About Us',
-            'slug' => 'about-us',
-            'status' => 'published'
+            'slug' => 'about-us'
         ]);
 
         $result = $this->repository->findBySlug('about-us');
@@ -75,10 +84,9 @@ class PageIntegrationTest extends TestCase
      */
     public function test_get_published_pages_only(): void
     {
-        $this->repository->create([
+        $this->publishedPage([
             'title' => 'Published Page',
-            'slug' => 'published',
-            'status' => 'published'
+            'slug' => 'published'
         ]);
 
         $this->repository->create([
@@ -107,12 +115,11 @@ class PageIntegrationTest extends TestCase
 
         $updated = $this->repository->update($page['id'], [
             'title' => 'Updated Title',
-            'status' => 'published'
         ]);
 
         $this->assertNotNull($updated);
         $this->assertEquals('Updated Title', $updated['title']);
-        $this->assertEquals('published', $updated['status']);
+        $this->assertEquals('draft', $updated['status']);
     }
 
     /**
@@ -151,10 +158,9 @@ class PageIntegrationTest extends TestCase
             'status' => 'draft'
         ]);
 
-        $this->repository->create([
+        $this->publishedPage([
             'title' => 'Published',
-            'slug' => 'published',
-            'status' => 'published'
+            'slug' => 'published'
         ]);
 
         $drafts = $this->repository->getByStatus('draft');

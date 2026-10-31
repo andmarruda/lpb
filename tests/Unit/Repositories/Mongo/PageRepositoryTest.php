@@ -134,6 +134,7 @@ class PageRepositoryTest extends TestCase
         $data = ['title' => 'Updated Page Title'];
 
         $pageMock = Mockery::mock();
+        $pageMock->slug = 'test-page';
         $pageMock->shouldReceive('update')
             ->once()
             ->with($data);
@@ -176,6 +177,8 @@ class PageRepositoryTest extends TestCase
         $pageMock->shouldReceive('delete')
             ->once()
             ->andReturn(true);
+        $pageMock->shouldReceive('getKey')->andReturn($id);
+        $pageMock->slug = 'test-page';
 
         $this->modelMock->shouldReceive('find')
             ->once()

@@ -2,88 +2,102 @@
 
 namespace Andmarruda\Lpb\Repositories\Concerns;
 
-use Andmarruda\Lpb\Contracts\PageRepositoryInterface;
-use Andmarruda\Lpb\Contracts\RevisionRepositoryInterface;
-use Andmarruda\Lpb\Exceptions\InvalidStateTransitionException;
+use Andmarruda\Lpb\Events\PageDeleted;
+use Andmarruda\Lpb\Events\PageSlugChanged;
+use Andmarruda\Lpb\Exceptions\InvalidValueException;
 use Andmarruda\Lpb\ValueObjects\PublishState;
 use Andmarruda\Lpb\ValueObjects\SEO;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Container\Container;
 
 /**
- * Publish state transitions with revisions, and SEO, for page repositories.
+ * Page fields, SEO and publication state for page repositories.
  *
- * Every status change goes through PublishState::transitionTo() and
- * records a revision of the page after the change. Expects $model and
- * $revisions properties.
+ * Status changes only through setPublication(), which the publishing
+ * service calls; changes to snapshot content increment tree_version.
+ * Expects a $model property.
  */
 trait ManagesPageState
 {
     /**
-     * Move a page to another publish state and record a revision.
+     * Create a page; pages start as drafts.
      *
-     * @param string|int $id The page identifier
-     * @param PublishState $to The target state
-     * @param string|null $createdBy Opaque user identifier stored on the revision
-     * @return array|null The updated page as array or null if not found
-     * @throws InvalidStateTransitionException
+     * @param array $data The page data
+     * @return array The created page as array
+     * @throws InvalidValueException When the data sets a status other than draft
      */
-    public function transition(string|int $id, PublishState $to, ?string $createdBy = null): ?array
+    public function create(array $data): array
     {
-        $page = $this->model->find($id);
-        if (!$page) {
-            return null;
+        $status = $data['status'] ?? PublishState::Draft;
+        if (($status instanceof PublishState ? $status : PublishState::tryFrom((string) $status)) !== PublishState::Draft) {
+            throw new InvalidValueException('Pages are created as drafts; publish them through the publishing service.');
         }
 
-        $next = $page->status->transitionTo($to);
-        $this->atomically(fn () => $this->applyTransition($page, $next, $createdBy));
-
-        return $this->find($id);
+        return parent::create($data);
     }
 
     /**
-     * Update a page; a status change is applied as a guarded transition.
+     * Update a page's fields; status is rejected.
      *
      * @param string|int $id The page identifier
      * @param array $data The data to update
      * @return array|null The updated page as array or null if not found
-     * @throws InvalidStateTransitionException
+     * @throws InvalidValueException When the data changes the status
      */
     public function update(string|int $id, array $data): ?array
     {
-        if (!array_key_exists('status', $data)) {
-            $page = $this->model->find($id);
-            if (!$page) {
-                return null;
-            }
-            $page->update($data);
-            $this->bumpTreeVersion($id);
-            return $page->fresh()->toArray();
+        if (array_key_exists('status', $data)) {
+            throw new InvalidValueException('Page status changes go through the publishing service (publish, unpublish, archive, rollback).');
         }
-
-        $status = $data['status'] instanceof PublishState ? $data['status'] : PublishState::from($data['status']);
-        unset($data['status']);
 
         $page = $this->model->find($id);
         if (!$page) {
             return null;
         }
 
-        // Validate before writing anything so a rejected transition changes nothing
-        $changesStatus = $status !== $page->status;
-        if ($changesStatus) {
-            $page->status->transitionTo($status);
+        $oldSlug = $page->slug;
+        $page->update($data);
+        $this->bumpTreeVersion($id);
+
+        if ($page->slug !== $oldSlug) {
+            $this->dispatchEvent(new PageSlugChanged((string) $page->getKey(), $oldSlug, $page->slug));
         }
 
-        $this->atomically(function () use ($page, $data, $status, $changesStatus) {
-            if ($data !== []) {
-                $page->update($data);
-                $this->bumpTreeVersion($page->getKey());
-            }
-            if ($changesStatus) {
-                $this->applyTransition($page, $status, null);
-            }
-        });
+        return $page->fresh()->toArray();
+    }
 
+    /**
+     * Delete a page.
+     *
+     * @param string|int $id The page identifier
+     * @return bool True if deleted successfully, false otherwise
+     */
+    public function delete(string|int $id): bool
+    {
+        $page = $this->model->find($id);
+        if (!$page || !$page->delete()) {
+            return false;
+        }
+
+        $this->dispatchEvent(new PageDeleted((string) $page->getKey(), (string) $page->slug));
+        return true;
+    }
+
+    /**
+     * Set the status and the served revision; used by the publishing service.
+     *
+     * @param string|int $id The page identifier
+     * @param PublishState $status
+     * @param string|null $publishedRevisionId
+     * @return array|null The updated page as array or null if not found
+     */
+    public function setPublication(string|int $id, PublishState $status, ?string $publishedRevisionId): ?array
+    {
+        $page = $this->model->find($id);
+        if (!$page) {
+            return null;
+        }
+
+        $page->forceFill(['status' => $status, 'published_revision_id' => $publishedRevisionId])->save();
         return $this->find($id);
     }
 
@@ -119,6 +133,20 @@ trait ManagesPageState
     }
 
     /**
+     * Dispatch an event when the application has an event dispatcher.
+     *
+     * @param object $event
+     * @return void
+     */
+    protected function dispatchEvent(object $event): void
+    {
+        $container = Container::getInstance();
+        if ($container->bound('events')) {
+            $container->make('events')->dispatch($event);
+        }
+    }
+
+    /**
      * Increment a page's tree_version after a change to content that is
      * part of its snapshot (blocks, widgets, SEO, metatags, template, fields).
      *
@@ -129,36 +157,4 @@ trait ManagesPageState
     {
         $this->model->newQuery()->whereKey($id)->increment('tree_version');
     }
-
-    /**
-     * Save the new state and record a revision of the page.
-     *
-     * @param Model $page
-     * @param PublishState $state
-     * @param string|null $createdBy
-     * @return void
-     */
-    protected function applyTransition(Model $page, PublishState $state, ?string $createdBy): void
-    {
-        $page->status = $state;
-        $page->save();
-
-        $this->revisions->record(PageRepositoryInterface::REVISION_TYPE, $page->getKey(), $this->snapshot($page->getKey()), $state, $createdBy);
-    }
-
-    /**
-     * Full page state stored in a revision.
-     *
-     * @param string|int $id
-     * @return array
-     */
-    abstract protected function snapshot(string|int $id): array;
-
-    /**
-     * Run writes atomically where the driver allows it.
-     *
-     * @param callable $callback
-     * @return void
-     */
-    abstract protected function atomically(callable $callback): void;
 }

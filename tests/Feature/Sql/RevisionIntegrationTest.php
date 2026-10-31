@@ -37,18 +37,19 @@ class RevisionIntegrationTest extends TestCase
     }
 
     /**
-     * Test record stores the payload, state and author
+     * Test record stores the payload, tree_version and author as a published revision
      */
     public function test_record(): void
     {
         $payload = ['title' => 'Home', 'blocks' => [['id' => 'b1', 'widget_instances' => [['id' => 'w1', 'config' => ['a' => 1]]]]]];
 
-        $revision = $this->repository->record('page', 'p1', $payload, PublishState::Published, 'user-7');
+        $revision = $this->repository->record('page', 'p1', $payload, 4, 'user-7');
 
         $this->assertSame('page', $revision['revisionable_type']);
         $this->assertSame('p1', $revision['revisionable_id']);
         $this->assertSame($payload, $revision['payload']);
         $this->assertSame('published', $revision['status']);
+        $this->assertSame(4, $revision['tree_version']);
         $this->assertSame('user-7', $revision['created_by']);
         $this->assertArrayHasKey('created_at', $revision);
         $this->assertArrayNotHasKey('updated_at', $revision);
@@ -59,10 +60,10 @@ class RevisionIntegrationTest extends TestCase
      */
     public function test_get_for_and_latest(): void
     {
-        $first = $this->repository->record('page', 'p1', ['v' => 1], PublishState::Published);
-        $second = $this->repository->record('page', 'p1', ['v' => 2], PublishState::Draft);
-        $this->repository->record('page', 'p2', ['v' => 3], PublishState::Published);
-        $this->repository->record('template', 'p1', ['v' => 4], PublishState::Published);
+        $first = $this->repository->record('page', 'p1', ['v' => 1], 1);
+        $second = $this->repository->record('page', 'p1', ['v' => 2], 1);
+        $this->repository->record('page', 'p2', ['v' => 3], 1);
+        $this->repository->record('template', 'p1', ['v' => 4], 1);
 
         $this->assertSame([$second['id'], $first['id']], array_column($this->repository->getFor('page', 'p1'), 'id'));
         $this->assertSame($second['id'], $this->repository->getLatestFor('page', 'p1')['id']);
@@ -75,13 +76,44 @@ class RevisionIntegrationTest extends TestCase
      */
     public function test_restore(): void
     {
-        $revision = $this->repository->record('page', 'p1', ['title' => 'Home'], PublishState::Published);
-        $this->repository->record('page', 'p1', ['title' => 'Later'], PublishState::Draft);
+        $revision = $this->repository->record('page', 'p1', ['title' => 'Home'], 1);
+        $this->repository->record('page', 'p1', ['title' => 'Later'], 1);
 
         $this->assertSame(['title' => 'Home'], $this->repository->restore('page', 'p1', $revision['id']));
 
         $this->expectException(InvalidRelationException::class);
         $this->repository->restore('page', 'p2', $revision['id']);
+    }
+
+    /**
+     * Test findFor returns a revision of the same entity only
+     */
+    public function test_find_for(): void
+    {
+        $revision = $this->repository->record('page', 'p1', ['title' => 'Home'], 1);
+
+        $this->assertSame(['title' => 'Home'], $this->repository->findFor('page', 'p1', (string) $revision['id'])['payload']);
+        $this->assertNull($this->repository->findFor('page', 'p2', (string) $revision['id']));
+        $this->assertNull($this->repository->findFor('page', 'p1', '00000000-0000-0000-0000-000000000000'));
+    }
+
+    /**
+     * Test prune keeps the newest revisions and the protected one
+     */
+    public function test_prune(): void
+    {
+        $ids = [];
+        foreach (range(1, 5) as $version) {
+            $ids[] = (string) $this->repository->record('page', 'p1', ['v' => $version], $version)['id'];
+        }
+        $other = $this->repository->record('page', 'p2', ['v' => 1], 1);
+
+        $this->assertSame(2, $this->repository->prune('page', 'p1', 2, $ids[0]));
+
+        $this->assertSame([$ids[4], $ids[3], $ids[0]], array_map('strval', array_column($this->repository->getFor('page', 'p1'), 'id')));
+        $this->assertSame(0, $this->repository->prune('page', 'p1', 3));
+        $this->assertCount(1, $this->repository->getFor('page', 'p2'));
+        $this->assertSame((string) $other['id'], (string) $this->repository->getLatestFor('page', 'p2')['id']);
     }
 
     /**
@@ -91,7 +123,7 @@ class RevisionIntegrationTest extends TestCase
     {
         $this->expectException(InvalidValueException::class);
 
-        $this->repository->record(' ', 'p1', [], PublishState::Draft);
+        $this->repository->record(' ', 'p1', [], 1);
     }
 
     /**
@@ -99,7 +131,7 @@ class RevisionIntegrationTest extends TestCase
      */
     public function test_revisions_are_append_only(): void
     {
-        $revision = $this->repository->record('page', 'p1', ['title' => 'Home'], PublishState::Published);
+        $revision = $this->repository->record('page', 'p1', ['title' => 'Home'], 1);
         $model = Revision::find($revision['id']);
 
         try {

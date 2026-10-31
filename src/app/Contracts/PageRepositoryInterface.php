@@ -5,8 +5,10 @@ use Andmarruda\Lpb\ValueObjects\PublishState;
 use Andmarruda\Lpb\ValueObjects\SEO;
 
 /**
- * Pages. A status change through update() or transition() must be a legal
- * PublishState transition and records a page revision.
+ * Pages. Status and published_revision_id change only through the
+ * publishing service (PublishingServiceInterface); update() rejects status.
+ * Every change to content that is part of a snapshot increments
+ * tree_version.
  */
 interface PageRepositoryInterface extends RepositoryInterface
 {
@@ -51,15 +53,14 @@ interface PageRepositoryInterface extends RepositoryInterface
     public function getMetatag(string|int $pageId, string $name): ?string;
 
     /**
-     * Move a page to another publish state and record a revision.
+     * Set the status and the served revision; used by the publishing service.
      *
      * @param string|int $id
-     * @param PublishState $to
-     * @param string|null $createdBy Opaque user identifier stored on the revision
+     * @param PublishState $status
+     * @param string|null $publishedRevisionId
      * @return array|null The updated page or null if the page was not found
-     * @throws \Andmarruda\Lpb\Exceptions\InvalidStateTransitionException
      */
-    public function transition(string|int $id, PublishState $to, ?string $createdBy = null): ?array;
+    public function setPublication(string|int $id, PublishState $status, ?string $publishedRevisionId): ?array;
 
     /**
      * Replace the SEO of a page; an empty SEO clears it.
