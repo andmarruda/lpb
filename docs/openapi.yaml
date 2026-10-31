@@ -1,0 +1,479 @@
+openapi: 3.1.0
+info:
+  title: Laravel Page Builder API
+  version: 0.1.0
+  description: |
+    Delivery (public) and editor (protected) JSON APIs of the Laravel Page
+    Builder package. The prefix is `laravel-page-builder.routes.prefix`
+    (default `/lpb/api`).
+
+    Editor routes run behind `laravel-page-builder.editor.middleware`
+    (default `web`, `auth`) and the `lpb.edit` / `lpb.publish` Gates, which
+    deny until the host application defines them.
+
+    Errors: 404 `{message}`; 409 `{message, current_version?}` for tree
+    conflicts and disallowed state changes; 422 `{message, errors}` where
+    tree errors are `[{path, message}]` with JSON pointers into the
+    submitted document and request validation errors are Laravel's
+    `{field: [messages]}`.
+servers:
+  - url: /lpb/api
+tags:
+  - name: delivery
+  - name: editor
+paths:
+  /pages/{slug}:
+    get:
+      tags: [delivery]
+      summary: Published payload of a page
+      parameters:
+        - { name: slug, in: path, required: true, schema: { type: string } }
+        - { name: If-None-Match, in: header, required: false, schema: { type: string } }
+      responses:
+        '200':
+          description: Canonical page tree with references resolved
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payload' }
+        '304': { description: Not modified }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /menus/{location}:
+    get:
+      tags: [delivery]
+      summary: Menu at a location, with nested items
+      parameters:
+        - { name: location, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Menu
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeliveredMenu' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /preview/{token}:
+    get:
+      tags: [delivery]
+      summary: Preview payload of the working tree (signed, expiring URL from the editor)
+      parameters:
+        - { name: token, in: path, required: true, schema: { type: string } }
+        - { name: expires, in: query, required: true, schema: { type: integer } }
+        - { name: signature, in: query, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Payload with revision_id and design_version null
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payload' }
+        '403': { description: Invalid or expired signature }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /editor/widgets:
+    get:
+      tags: [editor]
+      summary: Registered widget definitions
+      responses:
+        '200':
+          description: Definitions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/WidgetDefinition' } }
+  /editor/pages:
+    get:
+      tags: [editor]
+      summary: Pages with status and the unpublished-changes flag
+      responses:
+        '200':
+          description: Pages
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/PageSummary' } }
+    post:
+      tags: [editor]
+      summary: Create a draft page
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, slug]
+              properties:
+                title: { type: string }
+                slug: { type: string, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' }
+      responses:
+        '201': { $ref: '#/components/responses/PageDetail' }
+        '422': { $ref: '#/components/responses/Invalid' }
+  /editor/pages/{page}:
+    parameters: [{ $ref: '#/components/parameters/Page' }]
+    get:
+      tags: [editor]
+      summary: Page fields, working tree and tree_version
+      responses:
+        '200': { $ref: '#/components/responses/PageDetail' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [editor]
+      summary: Title, slug, SEO, metatags (set by name) and template
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                slug: { type: string }
+                seo: { oneOf: [{ $ref: '#/components/schemas/Seo' }, { type: 'null' }] }
+                metatags:
+                  type: array
+                  items: { type: object, required: [name, content], properties: { name: { type: string }, content: { type: string } } }
+                template_id: { type: [string, 'null'] }
+      responses:
+        '200': { $ref: '#/components/responses/PageDetail' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/Invalid' }
+    delete:
+      tags: [editor]
+      summary: Delete a page
+      responses:
+        '204': { description: Deleted }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /editor/pages/{page}/tree:
+    parameters: [{ $ref: '#/components/parameters/Page' }]
+    put:
+      tags: [editor]
+      summary: Replace the working tree atomically (optimistic concurrency)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tree, expected_version]
+              properties:
+                tree:
+                  type: object
+                  required: [blocks]
+                  properties:
+                    blocks: { type: array, items: { $ref: '#/components/schemas/Block' } }
+                expected_version: { type: integer, minimum: 0 }
+      responses:
+        '200': { $ref: '#/components/responses/WorkingTree' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Invalid' }
+  /editor/pages/{page}/publish:
+    parameters: [{ $ref: '#/components/parameters/Page' }]
+    post:
+      tags: [editor]
+      summary: Publish the working tree (lpb.publish)
+      responses:
+        '200':
+          description: Page detail with the new revision_id
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PageDetail'
+                  - type: object
+                    properties: { revision_id: { type: string } }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /editor/pages/{page}/unpublish:
+    parameters: [{ $ref: '#/components/parameters/Page' }]
+    post:
+      tags: [editor]
+      summary: Stop serving the page (lpb.publish)
+      responses:
+        '200': { $ref: '#/components/responses/PageDetail' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /editor/pages/{page}/archive:
+    parameters: [{ $ref: '#/components/parameters/Page' }]
+    post:
+      tags: [editor]
+      summary: Archive (lpb.publish)
+      responses:
+        '200': { $ref: '#/components/responses/PageDetail' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /editor/pages/{page}/unarchive:
+    parameters: [{ $ref: '#/components/parameters/Page' }]
+    post:
+      tags: [editor]
+      summary: Back to draft from archived (lpb.publish)
+      responses:
+        '200': { $ref: '#/components/responses/PageDetail' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /editor/pages/{page}/revisions:
+    parameters: [{ $ref: '#/components/parameters/Page' }]
+    get:
+      tags: [editor]
+      summary: Retained revisions, newest first
+      responses:
+        '200':
+          description: Revisions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/RevisionSummary' } }
+  /editor/pages/{page}/rollback/{revision}:
+    parameters: [{ $ref: '#/components/parameters/Page' }, { $ref: '#/components/parameters/Revision' }]
+    post:
+      tags: [editor]
+      summary: Serve a retained revision; the working tree is untouched (lpb.publish)
+      responses:
+        '200': { $ref: '#/components/responses/PageDetail' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /editor/pages/{page}/restore/{revision}:
+    parameters: [{ $ref: '#/components/parameters/Page' }, { $ref: '#/components/parameters/Revision' }]
+    post:
+      tags: [editor]
+      summary: Copy a retained revision's blocks into the working tree
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [expected_version], properties: { expected_version: { type: integer } } }
+      responses:
+        '200': { $ref: '#/components/responses/WorkingTree' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /editor/pages/{page}/preview-token:
+    parameters: [{ $ref: '#/components/parameters/Page' }]
+    post:
+      tags: [editor]
+      summary: Signed, expiring preview URL
+      responses:
+        '200':
+          description: Preview URL
+          content:
+            application/json:
+              schema: { type: object, properties: { url: { type: string }, expires_at: { type: string, format: date-time } } }
+  /editor/templates:
+    get: { tags: [editor], summary: Templates, responses: { '200': { description: '{data: Template[]}' } } }
+    post:
+      tags: [editor]
+      summary: Create a template (name, slug, view_path required)
+      requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/Template' } } } }
+      responses: { '201': { description: Template }, '422': { $ref: '#/components/responses/Invalid' } }
+  /editor/templates/{template}:
+    get: { tags: [editor], summary: Template, responses: { '200': { description: Template }, '404': { $ref: '#/components/responses/NotFound' } } }
+    patch: { tags: [editor], summary: Update a template (bumps the design version), responses: { '200': { description: Template } } }
+    delete: { tags: [editor], summary: Delete a template, responses: { '204': { description: Deleted } } }
+  /editor/templates/{template}/default:
+    post: { tags: [editor], summary: Make the template the only default one, responses: { '200': { description: Template } } }
+  /editor/menus:
+    get: { tags: [editor], summary: Menus, responses: { '200': { description: '{data: Menu[]}' } } }
+    post: { tags: [editor], summary: 'Create a menu (name, slug, location)', responses: { '201': { description: Menu } } }
+  /editor/menus/{menu}:
+    get: { tags: [editor], summary: Menu with its items as a flat, ordered list, responses: { '200': { description: Menu } } }
+    patch: { tags: [editor], summary: Update a menu, responses: { '200': { description: Menu } } }
+    delete: { tags: [editor], summary: Delete a menu, responses: { '204': { description: Deleted } } }
+  /editor/menus/{menu}/items:
+    post: { tags: [editor], summary: 'Add an item (label, url, target, order, parent_id)', responses: { '201': { description: Item }, '422': { $ref: '#/components/responses/Invalid' } } }
+  /editor/menus/{menu}/items/order:
+    put: { tags: [editor], summary: 'Reorder items: {items: [id, ...]}', responses: { '200': { description: Menu }, '422': { $ref: '#/components/responses/Invalid' } } }
+  /editor/menus/{menu}/items/{item}:
+    patch: { tags: [editor], summary: Update an item, responses: { '200': { description: Item } } }
+    delete: { tags: [editor], summary: Remove an item (children become root items), responses: { '204': { description: Deleted } } }
+  /editor/media:
+    get:
+      tags: [editor]
+      summary: Media records, optionally filtered
+      parameters:
+        - { name: collection, in: query, schema: { type: string } }
+        - { name: mime_type, in: query, schema: { type: string, example: 'image/*' } }
+        - { name: search, in: query, schema: { type: string } }
+      responses: { '200': { description: '{data: Media[]}' } }
+    post: { tags: [editor], summary: 'Create a record of a stored file (disk, path, filename, mime_type, size, meta, collection)', responses: { '201': { description: Media } } }
+  /editor/media/{media}:
+    get: { tags: [editor], summary: Media record, responses: { '200': { description: Media } } }
+    patch: { tags: [editor], summary: Update a media record, responses: { '200': { description: Media } } }
+    delete: { tags: [editor], summary: Delete a media record, responses: { '204': { description: Deleted } } }
+
+components:
+  parameters:
+    Page: { name: page, in: path, required: true, schema: { type: string } }
+    Revision: { name: revision, in: path, required: true, schema: { type: string } }
+  responses:
+    NotFound:
+      description: Not found
+      content: { application/json: { schema: { $ref: '#/components/schemas/Message' } } }
+    Conflict:
+      description: Tree version conflict or disallowed state change
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/Message'
+              - type: object
+                properties: { current_version: { type: integer } }
+    Invalid:
+      description: Validation failed
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message: { type: string }
+              errors:
+                oneOf:
+                  - type: array
+                    items: { type: object, properties: { path: { type: string, example: /blocks/0/widgets/1/config/title }, message: { type: string } } }
+                  - type: object
+                    additionalProperties: { type: array, items: { type: string } }
+    PageDetail:
+      description: Page detail
+      content: { application/json: { schema: { $ref: '#/components/schemas/PageDetail' } } }
+    WorkingTree:
+      description: Working tree
+      content: { application/json: { schema: { $ref: '#/components/schemas/WorkingTree' } } }
+  schemas:
+    Message:
+      type: object
+      properties: { message: { type: string } }
+    StyleVariant:
+      type: object
+      required: [breakpoint, state, props]
+      properties:
+        breakpoint: { type: [string, 'null'], description: 'null or a key of laravel-page-builder.breakpoints (desktop, tablet, mobile)' }
+        state: { enum: [null, hover, focus, active] }
+        props:
+          type: object
+          description: kebab-case CSS properties to strings, numbers or {"$var": "token"}
+          additionalProperties:
+            oneOf:
+              - { type: string }
+              - { type: number }
+              - { type: object, required: [$var], properties: { $var: { type: string } }, additionalProperties: false }
+    WidgetInstance:
+      type: object
+      required: [id, widget, config]
+      properties:
+        id: { type: string, description: ULID, client-generated for new nodes }
+        widget: { type: string }
+        schema_version: { type: integer, minimum: 1 }
+        config: { type: object, description: Validated against the widget's JSON Schema }
+        styles: { type: array, items: { $ref: '#/components/schemas/StyleVariant' } }
+    Block:
+      type: object
+      required: [id, type]
+      properties:
+        id: { type: string, description: ULID }
+        type: { enum: [flex, grid] }
+        styles: { type: array, items: { $ref: '#/components/schemas/StyleVariant' } }
+        widgets: { type: array, items: { $ref: '#/components/schemas/WidgetInstance' }, description: Rendered before children }
+        children: { type: array, items: { $ref: '#/components/schemas/Block' } }
+    Seo:
+      type: object
+      properties:
+        title: { type: string }
+        description: { type: string }
+        og_title: { type: string }
+        og_description: { type: string }
+        og_image: { type: string, format: uri }
+        canonical: { type: string, format: uri }
+        robots: { type: string }
+    Metatag:
+      type: object
+      required: [content]
+      properties:
+        name: { type: string }
+        property: { type: string }
+        content: { type: string }
+    PageInfo:
+      type: object
+      properties:
+        id: { type: string }
+        slug: { type: string }
+        title: { type: string }
+        seo: { oneOf: [{ $ref: '#/components/schemas/Seo' }, { type: 'null' }] }
+        metatags: { type: array, items: { $ref: '#/components/schemas/Metatag' } }
+    Payload:
+      type: object
+      description: Canonical page tree (format_version 1); media references resolved to {id, url, mime_type, meta} or null
+      required: [format_version, page, template, revision_id, design_version, blocks]
+      properties:
+        format_version: { const: 1 }
+        page: { $ref: '#/components/schemas/PageInfo' }
+        template:
+          oneOf:
+            - { type: object, properties: { id: { type: string }, slug: { type: string } } }
+            - { type: 'null' }
+        revision_id: { type: [string, 'null'] }
+        design_version: { type: [integer, 'null'] }
+        blocks: { type: array, items: { $ref: '#/components/schemas/Block' } }
+    WorkingTree:
+      allOf:
+        - $ref: '#/components/schemas/Payload'
+        - type: object
+          description: Unresolved references; revision_id and design_version are null
+          properties:
+            tree_version: { type: integer }
+    PageSummary:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        slug: { type: string }
+        status: { enum: [draft, published, archived] }
+        template_id: { type: [string, 'null'] }
+        tree_version: { type: integer }
+        published_revision_id: { type: [string, 'null'] }
+        has_unpublished_changes: { type: boolean }
+        updated_at: { type: [string, 'null'] }
+    PageDetail:
+      allOf:
+        - $ref: '#/components/schemas/PageSummary'
+        - type: object
+          properties:
+            tree: { $ref: '#/components/schemas/WorkingTree' }
+    RevisionSummary:
+      type: object
+      properties:
+        id: { type: string }
+        tree_version: { type: integer }
+        created_by: { type: [string, 'null'] }
+        created_at: { type: [string, 'null'] }
+        is_published: { type: boolean }
+    WidgetDefinition:
+      type: object
+      properties:
+        name: { type: string }
+        version: { type: integer }
+        label: { type: string }
+        category: { type: [string, 'null'] }
+        schema: { type: object, description: 'JSON Schema 2020-12; fields may carry x-lpb-type: media | link | richText' }
+    Template:
+      type: object
+      properties:
+        name: { type: string }
+        slug: { type: string }
+        description: { type: [string, 'null'] }
+        view_path: { type: string, description: Blade shell view }
+        status: { enum: [active, inactive] }
+        seo: { oneOf: [{ $ref: '#/components/schemas/Seo' }, { type: 'null' }] }
+    DeliveredMenu:
+      type: object
+      properties:
+        id: { type: [string, integer] }
+        name: { type: string }
+        slug: { type: string }
+        location: { type: string }
+        items: { type: array, items: { $ref: '#/components/schemas/DeliveredMenuItem' } }
+    DeliveredMenuItem:
+      type: object
+      properties:
+        id: { type: [string, integer] }
+        label: { type: string }
+        url: { type: string }
+        target: { enum: [_self, _blank, _parent, _top] }
+        children: { type: array, items: { $ref: '#/components/schemas/DeliveredMenuItem' } }

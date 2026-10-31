@@ -3,7 +3,7 @@
 namespace Andmarruda\Lpb\Repositories\Mongo;
 
 use Andmarruda\Lpb\Contracts\PageTreeRepositoryInterface;
-use Andmarruda\Lpb\Exceptions\InvalidRelationException;
+use Andmarruda\Lpb\Exceptions\RecordNotFoundException;
 use Andmarruda\Lpb\Exceptions\TreeValidationException;
 use Andmarruda\Lpb\Exceptions\TreeVersionConflictException;
 use Andmarruda\Lpb\Models\Mongo\Page;
@@ -56,7 +56,7 @@ class PageTreeRepository implements PageTreeRepositoryInterface
             ->update(['blocks' => $blocks, 'block_ids' => $blockIds, '$inc' => ['tree_version' => 1]]);
 
         if ($updated === 0) {
-            $page = $this->pages->newQuery()->find($pageId) ?? throw new InvalidRelationException("Page '{$pageId}' not found.");
+            $page = $this->pages->newQuery()->find($pageId) ?? throw new RecordNotFoundException("Page '{$pageId}' not found.");
             throw new TreeVersionConflictException((int) $page->tree_version, $expectedVersion);
         }
 

@@ -39,6 +39,7 @@
         <env name="CACHE_STORE" value="array"/>
         <env name="CACHE_DRIVER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
+        <env name="SESSION_DRIVER" value="array"/>
         <env name="LPB_DATABASE_DRIVER" value="sql"/>
         <env name="LPB_SQL_CONNECTION" value="sqlite"/>
     </php>

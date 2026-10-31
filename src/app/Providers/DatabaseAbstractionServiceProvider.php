@@ -23,7 +23,10 @@ use Andmarruda\Lpb\Delivery\BumpDesignOnTemplateChange;
 use Andmarruda\Lpb\Delivery\UpdatePointers;
 use Andmarruda\Lpb\Events\TemplateChanged;
 use Andmarruda\Lpb\Webhooks\NotifyWebhooks;
+use Andmarruda\Lpb\Http\Shell;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Gate;
 use Andmarruda\Lpb\Contracts\TemplateRepositoryInterface;
 use Andmarruda\Lpb\Repositories\Sql;
 use Andmarruda\Lpb\Repositories\Mongo;
@@ -75,11 +78,33 @@ class DatabaseAbstractionServiceProvider extends ServiceProvider
         }
         Event::listen(TemplateChanged::class, BumpDesignOnTemplateChange::class);
 
+        // Shell views: <x-lpb::head :page="$lpb" />, @lpbPayload and lpb::shell
+        $views = __DIR__ . '/../../resources/views';
+        $this->loadViewsFrom($views, 'lpb');
+        Blade::anonymousComponentPath("{$views}/components", 'lpb');
+        Blade::directive('lpbPayload', fn (string $expression) => '<?php echo \\' . Shell::class . '::payloadScript(' . ($expression !== '' ? $expression : '$lpb') . '); ?>');
+
+        if (config('laravel-page-builder.routes.enabled', true)) {
+            $this->loadRoutesFrom(__DIR__ . '/../../routes/lpb.php');
+        }
+
+        // The host application grants editing and publishing; until it does, both are denied
+        foreach (['lpb.edit', 'lpb.publish'] as $ability) {
+            if (!Gate::has($ability)) {
+                Gate::define($ability, fn ($user = null) => false);
+            }
+        }
+
         if ($this->app->runningInConsole()) {
             // Publish config
             $this->publishes([
                 __DIR__ . '/../../config/laravel-page-builder.php' => config_path('laravel-page-builder.php'),
             ], 'lpb-config');
+
+            // Publish the shell views
+            $this->publishes([
+                __DIR__ . '/../../resources/views' => resource_path('views/vendor/lpb'),
+            ], 'lpb-views');
 
             // Publish SQL migrations
             $this->publishes([

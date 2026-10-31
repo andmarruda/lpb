@@ -3,7 +3,7 @@
 namespace Andmarruda\Lpb\Repositories\Sql;
 
 use Andmarruda\Lpb\Contracts\PageTreeRepositoryInterface;
-use Andmarruda\Lpb\Exceptions\InvalidRelationException;
+use Andmarruda\Lpb\Exceptions\RecordNotFoundException;
 use Andmarruda\Lpb\Exceptions\TreeValidationException;
 use Andmarruda\Lpb\Exceptions\TreeVersionConflictException;
 use Andmarruda\Lpb\Models\Sql\Block;
@@ -49,7 +49,7 @@ class PageTreeRepository implements PageTreeRepositoryInterface
 
         $this->pages->getConnection()->transaction(function () use ($pageId, $expectedVersion, $flat, $blockIds, $widgetIds) {
             $page = $this->pages->newQuery()->whereKey($pageId)->lockForUpdate()->first()
-                ?? throw new InvalidRelationException("Page '{$pageId}' not found.");
+                ?? throw new RecordNotFoundException("Page '{$pageId}' not found.");
             if ($page->tree_version !== $expectedVersion) {
                 throw new TreeVersionConflictException($page->tree_version, $expectedVersion);
             }

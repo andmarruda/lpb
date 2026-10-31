@@ -32,7 +32,7 @@ RUN composer require mongodb/laravel-mongodb --no-interaction
 COPY . /app/lpb-package
 
 RUN composer config repositories.lpb '{"type": "path", "url": "/app/lpb-package", "options": {"symlink": false}}' && \
-    composer require andmarruda/lpb:@dev --no-interaction && \
+    composer require andmarruda/lpb:@dev inertiajs/inertia-laravel --no-interaction && \
     php artisan vendor:publish --tag=lpb-config --force
 
 RUN cat > config/database.php << 'EOF'

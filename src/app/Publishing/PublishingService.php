@@ -9,7 +9,7 @@ use Andmarruda\Lpb\Events\PageArchived;
 use Andmarruda\Lpb\Events\PagePublished;
 use Andmarruda\Lpb\Events\PageRolledBack;
 use Andmarruda\Lpb\Events\PageUnpublished;
-use Andmarruda\Lpb\Exceptions\InvalidRelationException;
+use Andmarruda\Lpb\Exceptions\RecordNotFoundException;
 use Andmarruda\Lpb\Exceptions\InvalidStateTransitionException;
 use Andmarruda\Lpb\ValueObjects\PublishState;
 use Illuminate\Contracts\Events\Dispatcher;
@@ -119,13 +119,13 @@ class PublishingService implements PublishingServiceInterface
 
     private function page(string $pageId): array
     {
-        return $this->pages->find($pageId) ?? throw new InvalidRelationException("Page '{$pageId}' not found.");
+        return $this->pages->find($pageId) ?? throw new RecordNotFoundException("Page '{$pageId}' not found.");
     }
 
     private function revision(string $pageId, string $revisionId): array
     {
         return $this->revisions->findFor(self::TYPE, $pageId, $revisionId)
-            ?? throw new InvalidRelationException("Revision '{$revisionId}' is not a retained revision of page '{$pageId}'.");
+            ?? throw new RecordNotFoundException("Revision '{$revisionId}' is not a retained revision of page '{$pageId}'.");
     }
 
     /**
