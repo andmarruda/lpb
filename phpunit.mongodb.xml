@@ -14,6 +14,9 @@
             <file>tests/Unit/BaseRepositoryTest.php</file>
             <directory>tests/Unit/ValueObjects</directory>
             <directory>tests/Unit/Casts</directory>
+            <directory>tests/Unit/Tree</directory>
+            <directory>tests/Unit/Validation</directory>
+            <directory>tests/Unit/Widgets</directory>
         </testsuite>
         <testsuite name="Feature">
             <directory>tests/Feature/Mongo</directory>

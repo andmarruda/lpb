@@ -2,6 +2,7 @@
 
 namespace Andmarruda\Lpb\Tests\Feature\Sql;
 
+use Andmarruda\Lpb\Tests\Feature\Concerns\RegistersTestWidgets;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 use Andmarruda\Lpb\Contracts\PageRepositoryInterface;
@@ -13,7 +14,14 @@ use Andmarruda\Lpb\Tests\Feature\Concerns\AcceptanceScenario;
  */
 class Phase1AcceptanceTest extends TestCase
 {
-    use RefreshDatabase, AcceptanceScenario;
+    use RefreshDatabase, AcceptanceScenario, RegistersTestWidgets;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->registerTestWidgets();
+    }
 
     /**
      * Test the scenario runs against the SQL repositories

@@ -2,6 +2,7 @@
 
 namespace Andmarruda\Lpb\Tests\Feature\Mongo;
 
+use Andmarruda\Lpb\Tests\Feature\Concerns\RegistersTestWidgets;
 use Tests\TestCase;
 use Andmarruda\Lpb\Contracts\PageRepositoryInterface;
 use Andmarruda\Lpb\Models\Mongo\Page;
@@ -15,11 +16,13 @@ use Andmarruda\Lpb\Tests\Feature\Concerns\AcceptanceScenario;
  */
 class Phase1AcceptanceTest extends TestCase
 {
-    use AcceptanceScenario;
+    use AcceptanceScenario, RegistersTestWidgets;
 
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->registerTestWidgets();
 
         $this->truncate();
     }

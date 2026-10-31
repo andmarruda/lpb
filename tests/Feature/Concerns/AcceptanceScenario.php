@@ -53,8 +53,8 @@ trait AcceptanceScenario
 
         // 4. A widget instance with JSON config on each block
         $heroConfig = ['title' => 'Welcome', 'buttons' => [['label' => 'Start', 'url' => '/start']]];
-        $blocks->addWidgetInstance($row['id'], 'App\\Widgets\\Hero', $heroConfig);
-        $blocks->addWidgetInstance($column['id'], 'App\\Widgets\\Text', ['body' => '<p>Hello</p>']);
+        $blocks->addWidgetInstance($row['id'], 'hero', $heroConfig);
+        $blocks->addWidgetInstance($column['id'], 'text', ['body' => '<p>Hello</p>']);
 
         // 5. SEO through the value object, plus a supplementary metatag
         $seo = new SEO(title: 'Home', description: 'Welcome home', canonical: 'https://example.com/');
@@ -82,7 +82,7 @@ trait AcceptanceScenario
         ));
         $this->assertSame([$row['id'], $column['id']], array_column($loaded['blocks'], 'id'));
         $this->assertSame([null, $row['id']], array_column($loaded['blocks'], 'parent_id'));
-        $this->assertSame('App\\Widgets\\Hero', $loaded['blocks'][0]['widget_instances'][0]['widget']);
+        $this->assertSame('hero', $loaded['blocks'][0]['widget_instances'][0]['widget']);
         $this->assertSameIgnoringKeyOrder($heroConfig, $loaded['blocks'][0]['widget_instances'][0]['config']);
         $this->assertSame(['body' => '<p>Hello</p>'], $loaded['blocks'][1]['widget_instances'][0]['config']);
         $this->assertNull($pages->findBySlugWithRelations('missing'));

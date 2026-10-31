@@ -2,6 +2,7 @@
 
 namespace Andmarruda\Lpb\Tests\Feature\Mongo;
 
+use Andmarruda\Lpb\Tests\Feature\Concerns\RegistersTestWidgets;
 use Tests\TestCase;
 use Andmarruda\Lpb\Exceptions\InvalidStateTransitionException;
 use Andmarruda\Lpb\Exceptions\InvalidValueException;
@@ -20,6 +21,8 @@ use Andmarruda\Lpb\ValueObjects\SEO;
  */
 class PageLifecycleIntegrationTest extends TestCase
 {
+    use RegistersTestWidgets;
+
     protected PageRepository $pages;
     protected BlockRepository $blocks;
     protected RevisionRepository $revisions;
@@ -28,6 +31,8 @@ class PageLifecycleIntegrationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->registerTestWidgets();
 
         Page::truncate();
         Revision::truncate();

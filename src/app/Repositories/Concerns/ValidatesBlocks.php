@@ -7,6 +7,7 @@ use Andmarruda\Lpb\Support\Ulid;
 use Andmarruda\Lpb\Tree\BlockType;
 use Andmarruda\Lpb\Tree\TreeLimits;
 use Andmarruda\Lpb\Validation\StyleValidator;
+use Andmarruda\Lpb\Widgets\WidgetRegistry;
 
 /**
  * Validation of block and widget instance input shared by both drivers.
@@ -78,11 +79,9 @@ trait ValidatesBlocks
      */
     protected function widgetInstanceAttributes(string $widget, array $config, ?array $styles = []): array
     {
-        if (trim($widget) === '') {
-            throw new InvalidValueException('Widget must be a non-empty registered widget name.');
-        }
+        [$config, $version] = app(WidgetRegistry::class)->validate($widget, $config);
 
-        $attributes = ['widget' => $widget, 'schema_version' => 1, 'config' => $config];
+        $attributes = ['widget' => $widget, 'schema_version' => $version, 'config' => $config];
         if ($styles !== null) {
             $attributes['styles'] = $this->validStyles($styles);
         }

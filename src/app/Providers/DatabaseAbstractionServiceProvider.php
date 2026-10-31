@@ -3,6 +3,11 @@ namespace Andmarruda\Lpb\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Andmarruda\Lpb\Console\InstallMongoCommand;
+use Andmarruda\Lpb\Console\MakeWidgetCommand;
+use Andmarruda\Lpb\Console\TypesCommand;
+use Andmarruda\Lpb\Console\WidgetsSchemaCommand;
+use Andmarruda\Lpb\Lpb;
+use Andmarruda\Lpb\Widgets\WidgetRegistry;
 use Andmarruda\Lpb\Contracts\PageRepositoryInterface;
 use Andmarruda\Lpb\Contracts\BlockRepositoryInterface;
 use Andmarruda\Lpb\Contracts\MenuRepositoryInterface;
@@ -40,6 +45,9 @@ class DatabaseAbstractionServiceProvider extends ServiceProvider
         foreach ($this->repositories as $contract => [$sqlImplementation, $mongoImplementation]) {
             $this->app->bind($contract, $useMongo ? $mongoImplementation : $sqlImplementation);
         }
+
+        $this->app->singleton(WidgetRegistry::class);
+        $this->app->singleton(Lpb::class);
     }
 
     public function boot(): void
@@ -56,7 +64,12 @@ class DatabaseAbstractionServiceProvider extends ServiceProvider
             ], 'lpb-migrations-sql');
 
             // MongoDB collections, validators and indexes are created by a command instead of migrations
-            $this->commands([InstallMongoCommand::class]);
+            $this->commands([
+                InstallMongoCommand::class,
+                MakeWidgetCommand::class,
+                TypesCommand::class,
+                WidgetsSchemaCommand::class,
+            ]);
         }
     }
 

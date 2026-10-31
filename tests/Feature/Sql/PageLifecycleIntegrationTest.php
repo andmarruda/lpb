@@ -2,6 +2,7 @@
 
 namespace Andmarruda\Lpb\Tests\Feature\Sql;
 
+use Andmarruda\Lpb\Tests\Feature\Concerns\RegistersTestWidgets;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 use Andmarruda\Lpb\Exceptions\InvalidStateTransitionException;
@@ -23,7 +24,7 @@ use Andmarruda\Lpb\ValueObjects\SEO;
  */
 class PageLifecycleIntegrationTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, RegistersTestWidgets;
 
     protected PageRepository $pages;
     protected BlockRepository $blocks;
@@ -33,6 +34,8 @@ class PageLifecycleIntegrationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->registerTestWidgets();
 
         $this->revisions = new RevisionRepository(new Revision());
         $this->pages = new PageRepository(new Page(), $this->revisions);

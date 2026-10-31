@@ -2,9 +2,11 @@
 
 namespace Andmarruda\Lpb\Tests\Feature\Mongo;
 
+use Andmarruda\Lpb\Tests\Feature\Concerns\RegistersTestWidgets;
 use Tests\TestCase;
 use Andmarruda\Lpb\Tests\Feature\Concerns\ComparesStoredArrays;
 use Andmarruda\Lpb\Tests\Feature\Concerns\TreeStorageScenario;
+use Andmarruda\Lpb\Tests\Feature\Concerns\WidgetValidationScenario;
 use Andmarruda\Lpb\Contracts\BlockRepositoryInterface;
 use Andmarruda\Lpb\Exceptions\InvalidRelationException;
 use Andmarruda\Lpb\Exceptions\InvalidValueException;
@@ -18,7 +20,7 @@ use Andmarruda\Lpb\Models\Mongo\Template;
  */
 class BlockIntegrationTest extends TestCase
 {
-    use ComparesStoredArrays, TreeStorageScenario;
+    use ComparesStoredArrays, TreeStorageScenario, WidgetValidationScenario, RegistersTestWidgets;
 
     protected BlockRepository $repository;
     protected PageRepository $pages;
@@ -26,6 +28,8 @@ class BlockIntegrationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->registerTestWidgets();
 
         Page::truncate();
         Template::truncate();
@@ -193,10 +197,10 @@ class BlockIntegrationTest extends TestCase
         $block = $this->repository->create(['page_id' => $page['id'], 'type' => 'flex']);
         $config = ['title' => 'Welcome', 'buttons' => [['label' => 'Go', 'url' => '/go']]];
 
-        $instance = $this->repository->addWidgetInstance($block['id'], 'App\\Widgets\\Hero', $config, 1);
+        $instance = $this->repository->addWidgetInstance($block['id'], 'hero', $config, 1);
 
         $this->assertSame($block['id'], $instance['block_id']);
-        $this->assertSame('App\\Widgets\\Hero', $instance['widget']);
+        $this->assertSame('hero', $instance['widget']);
         $this->assertSameIgnoringKeyOrder($config, $instance['config']);
         $this->assertSame(1, $instance['order']);
 
