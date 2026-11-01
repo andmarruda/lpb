@@ -3,6 +3,7 @@ namespace Andmarruda\Lpb\Database;
 
 use Andmarruda\Lpb\Models\Mongo\GlobalSetting;
 use Andmarruda\Lpb\Models\Mongo\Media;
+use Andmarruda\Lpb\Models\Mongo\MediaFile;
 use Andmarruda\Lpb\Models\Mongo\Menu;
 use Andmarruda\Lpb\Models\Mongo\Page;
 use Andmarruda\Lpb\Models\Mongo\Revision;
@@ -128,6 +129,15 @@ final class MongoSchema
                     ['key' => ['mime_type' => 1], 'name' => 'idx_media_mime_type'],
                     ['key' => ['collection' => 1, 'filename' => 1], 'name' => 'idx_media_collection'],
                     ['key' => ['filename' => 1], 'name' => 'idx_media_filename'],
+                ],
+            ],
+            (new MediaFile())->getTable() => [
+                'validator' => self::schema(['media_id', 'contents'], [
+                    'media_id' => $string,
+                    'contents' => $string,
+                ]),
+                'indexes' => [
+                    ['key' => ['media_id' => 1], 'name' => 'uq_media_files_media', 'unique' => true],
                 ],
             ],
             (new Revision())->getTable() => [

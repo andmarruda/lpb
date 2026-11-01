@@ -50,5 +50,13 @@ final class Library
         Form::class,
         CodeHighlight::class,
         Hotspot::class,
+        Toggle::class,
+        TextPath::class,
+        VideoPlaylist::class,
+        MediaCarousel::class,
+        ProgressTracker::class,
+        SearchForm::class,
+        AuthorBox::class,
+        OffCanvas::class,
     ];
 }

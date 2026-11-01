@@ -23,6 +23,7 @@ class MigrationsTest extends TestCase
         'lpb_menus',
         'lpb_menu_items',
         'lpb_media',
+        'lpb_media_files',
         'lpb_revisions',
     ];
 

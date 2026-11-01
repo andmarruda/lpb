@@ -2,7 +2,7 @@
 namespace Andmarruda\Lpb\Delivery;
 
 use Andmarruda\Lpb\Contracts\MediaRepositoryInterface;
-use Illuminate\Contracts\Filesystem\Factory as Filesystems;
+use Andmarruda\Lpb\Media\MediaStorage;
 use Throwable;
 
 /**
@@ -17,7 +17,7 @@ class ReferenceResolver
     /** @var array<string, array|null> */
     private array $media = [];
 
-    public function __construct(private MediaRepositoryInterface $repository, private Filesystems $files)
+    public function __construct(private MediaRepositoryInterface $repository, private MediaStorage $storage)
     {
     }
 
@@ -64,18 +64,10 @@ class ReferenceResolver
 
         return $this->media[$key] = $record === null ? null : [
             'id' => $record['id'],
-            'url' => $this->url($record),
+            'url' => $this->storage->url($record),
             'mime_type' => $record['mime_type'],
             'meta' => $record['meta'] ?? [],
         ];
     }
 
-    private function url(array $record): ?string
-    {
-        try {
-            return $this->files->disk($record['disk'])->url($record['path']);
-        } catch (Throwable) {
-            return null;
-        }
-    }
 }

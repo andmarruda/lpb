@@ -88,6 +88,31 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Media
+    |--------------------------------------------------------------------------
+    |
+    | Where uploaded images, videos and audio are stored: any filesystem disk
+    | of config/filesystems.php (local, public, s3, or an S3-compatible bucket
+    | such as Cloudflare R2), or "database" to keep the files in the database
+    | and serve them from the package's media route. 'disks' lists other
+    | disks editors may choose per upload. max_size is in KB. SVG is not
+    | allowed by default: it can carry scripts.
+    |
+    */
+    'media' => [
+        'disk' => env('LPB_MEDIA_DISK', 'public'),
+        'disks' => [],
+        'directory' => env('LPB_MEDIA_DIRECTORY', 'lpb'),
+        'max_size' => (int) env('LPB_MEDIA_MAX_SIZE', 10240),
+        'mimes' => [
+            'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif',
+            'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime',
+            'audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/webm', 'audio/aac',
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Page Tree Limits
     |--------------------------------------------------------------------------
     |

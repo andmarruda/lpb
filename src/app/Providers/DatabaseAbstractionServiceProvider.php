@@ -19,7 +19,9 @@ use Andmarruda\Lpb\Contracts\MenuRepositoryInterface;
 use Andmarruda\Lpb\Contracts\MediaRepositoryInterface;
 use Andmarruda\Lpb\Contracts\RevisionRepositoryInterface;
 use Andmarruda\Lpb\Contracts\SettingsRepositoryInterface;
-use Andmarruda\Lpb\Delivery\BumpDesignOnTemplateChange;
+use Andmarruda\Lpb\Contracts\MediaContentsRepositoryInterface;
+use Andmarruda\Lpb\Delivery\BumpDesignVersion;
+use Andmarruda\Lpb\Events\MediaChanged;
 use Andmarruda\Lpb\Delivery\UpdatePointers;
 use Andmarruda\Lpb\Events\TemplateChanged;
 use Andmarruda\Lpb\Webhooks\NotifyWebhooks;
@@ -45,6 +47,7 @@ class DatabaseAbstractionServiceProvider extends ServiceProvider
         BlockRepositoryInterface::class       => [Sql\BlockRepository::class, Mongo\BlockRepository::class],
         MenuRepositoryInterface::class        => [Sql\MenuRepository::class, Mongo\MenuRepository::class],
         MediaRepositoryInterface::class       => [Sql\MediaRepository::class, Mongo\MediaRepository::class],
+        MediaContentsRepositoryInterface::class => [Sql\MediaContentsRepository::class, Mongo\MediaContentsRepository::class],
         RevisionRepositoryInterface::class    => [Sql\RevisionRepository::class, Mongo\RevisionRepository::class],
         SettingsRepositoryInterface::class    => [Sql\SettingsRepository::class, Mongo\SettingsRepository::class],
     ];
@@ -76,7 +79,8 @@ class DatabaseAbstractionServiceProvider extends ServiceProvider
                 Event::listen($event, [$listener, $method]);
             }
         }
-        Event::listen(TemplateChanged::class, BumpDesignOnTemplateChange::class);
+        Event::listen(TemplateChanged::class, BumpDesignVersion::class);
+        Event::listen(MediaChanged::class, BumpDesignVersion::class);
 
         // Shell views: <x-lpb::head :page="$lpb" />, @lpbPayload and lpb::shell
         $views = __DIR__ . '/../../resources/views';

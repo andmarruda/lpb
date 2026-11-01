@@ -6,6 +6,7 @@ use Andmarruda\Lpb\Http\Controllers\Editor\MenuController;
 use Andmarruda\Lpb\Http\Controllers\Editor\PageController;
 use Andmarruda\Lpb\Http\Controllers\Editor\TemplateController;
 use Andmarruda\Lpb\Http\Controllers\Editor\WidgetController;
+use Andmarruda\Lpb\Http\Controllers\MediaFileController;
 use Andmarruda\Lpb\Http\Controllers\PageViewController;
 use Illuminate\Support\Facades\Route;
 
@@ -20,6 +21,7 @@ Route::prefix(config('laravel-page-builder.routes.prefix', 'lpb/api'))->name('lp
         Route::get('pages/{slug}', [DeliveryController::class, 'page'])->name('pages.show');
         Route::get('menus/{location}', [DeliveryController::class, 'menu'])->name('menus.show');
         Route::get('preview/{token}', [DeliveryController::class, 'preview'])->middleware('signed')->name('preview');
+        Route::get('media/{media}/{file}', MediaFileController::class)->where('file', '[a-z0-9]+\\.[a-z0-9]+')->name('media.file');
     });
 
     // Editor (protected by middleware and the lpb.edit / lpb.publish Gates)
@@ -60,6 +62,8 @@ Route::prefix(config('laravel-page-builder.routes.prefix', 'lpb/api'))->name('lp
 
         Route::get('media', [MediaController::class, 'index'])->name('media.index');
         Route::post('media', [MediaController::class, 'store'])->name('media.store');
+        Route::post('media/upload', [MediaController::class, 'upload'])->name('media.upload');
+        Route::post('media/{media}/replace', [MediaController::class, 'replace'])->name('media.replace');
         Route::get('media/{media}', [MediaController::class, 'show'])->name('media.show');
         Route::patch('media/{media}', [MediaController::class, 'update'])->name('media.update');
         Route::delete('media/{media}', [MediaController::class, 'destroy'])->name('media.destroy');

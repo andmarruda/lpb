@@ -120,7 +120,7 @@ php artisan lpb:widgets:schema --output=widgets.json      # definitions and JSON
 php artisan lpb:upgrade-content                           # rewrite stored configs to current versions
 ```
 
-The built-in library (40 widgets: heading, text, image, button, tabs,
+The built-in library (48 widgets: heading, text, image, button, tabs,
 accordion, carousels, price table, countdown, form, nav menu…) is registered
 by default. Its `html` widget outputs raw HTML and is only registered with
 `LPB_RAW_HTML_WIDGET=true`; enable it only when every editor is trusted.
@@ -129,6 +129,52 @@ Field types: `string`, `integer`, `number`, `boolean`, `enum`, `array`,
 `object`, `media` (`{"$media": id}`, resolved in payloads), `link` and
 `richText` (HTML; renderers sanitise it). Modifiers: `required`, `default`,
 `min`, `max`, `maxLength`, `pattern`, `label`, `help`.
+
+## Media
+
+Image, video and audio widgets reference media records (`{"$media": id}`);
+delivery payloads resolve them to `{id, url, mime_type, meta}`. Files can be
+uploaded and replaced from the editor API (`POST /editor/media/upload`,
+`POST /editor/media/{id}/replace`) or in PHP:
+
+```php
+use Andmarruda\Lpb\Media\MediaStorage;
+
+$media = app(MediaStorage::class)->upload($request->file('photo'), ['meta' => ['alt' => 'Team']]);
+app(MediaStorage::class)->replace($media['id'], $request->file('new_photo')); // same id, new file
+```
+
+Where files go is `LPB_MEDIA_DISK`:
+
+| Value | Storage |
+|---|---|
+| `public` (default), `local` or any disk of `config/filesystems.php` | Laravel filesystem disk |
+| `s3` | Amazon S3 (`composer require league/flysystem-aws-s3-v3`) |
+| an S3-compatible disk such as Cloudflare R2 | see below |
+| `database` | The database itself (`lpb_media_files`), served from `GET /lpb/api/media/{id}/{file}` |
+
+```php
+// config/filesystems.php — Cloudflare R2
+'r2' => [
+    'driver' => 's3',
+    'key' => env('R2_ACCESS_KEY_ID'),
+    'secret' => env('R2_SECRET_ACCESS_KEY'),
+    'region' => 'auto',
+    'bucket' => env('R2_BUCKET'),
+    'endpoint' => env('R2_ENDPOINT'), // https://<account>.r2.cloudflarestorage.com
+    'url' => env('R2_PUBLIC_URL'),     // public bucket or custom domain
+    'use_path_style_endpoint' => true,
+],
+```
+
+`laravel-page-builder.media.disks` lists extra disks editors may choose per
+upload. Types are detected from the file contents (`media.mimes`; SVG is not
+allowed by default because it can carry scripts) and limited to
+`media.max_size` KB. Uploads get generated names, so replacing a file
+changes its URL; replacing or deleting media bumps the design version so
+cached payloads pick up the new URL. Database-stored files are served with
+`nosniff` and a sandboxing Content-Security-Policy; keep them below ~12 MB on
+MongoDB (16 MB document limit).
 
 ## The page tree
 

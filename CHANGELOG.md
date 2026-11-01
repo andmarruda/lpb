@@ -15,7 +15,11 @@ First open beta of the Laravel package. Migrations may still change until
 ### Widgets
 - Widgets defined in code with a fluent schema builder (JSON Schema 2020-12),
   validated with opis/json-schema on every write; step-by-step `upgrade()`.
-- Built-in library of 40 widgets (the raw `html` widget is opt-in).
+- Built-in library of 48 widgets (the raw `html` widget is opt-in).
+
+### Media
+- Uploads and replace (same id, new file) to any filesystem disk (local,
+  S3, Cloudflare R2, ...) or to the database, served by the package.
 - `lpb:make-widget`, `lpb:types`, `lpb:widgets:schema`, `lpb:upgrade-content`.
 
 ### Editing and publishing
