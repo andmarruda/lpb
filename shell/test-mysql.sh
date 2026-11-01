@@ -16,7 +16,7 @@ trap cleanup EXIT
 cleanup
 
 echo "Building MySQL Integration Test..."
-docker build -f config/docker/Dockerfile.sql.test -t lpb-sql-test .
+docker build --build-arg PHP_VERSION="${PHP_VERSION:-8.2}" -f config/docker/Dockerfile.sql.test -t lpb-sql-test .
 docker build -f config/docker/Dockerfile.mysql.test -t lpb-mysql-test .
 
 echo ""

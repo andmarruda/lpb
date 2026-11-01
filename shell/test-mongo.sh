@@ -6,7 +6,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJECT_ROOT"
 
 echo "Building MongoDB Integration Test..."
-docker build -f config/docker/Dockerfile.mongo.test -t lpb-mongo-test .
+docker build --build-arg PHP_VERSION="${PHP_VERSION:-8.2}" -f config/docker/Dockerfile.mongo.test -t lpb-mongo-test .
 
 echo ""
 echo "Running MongoDB Integration Test..."

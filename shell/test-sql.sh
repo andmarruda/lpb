@@ -6,7 +6,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJECT_ROOT"
 
 echo "Building SQL Integration Test..."
-docker build -f config/docker/Dockerfile.sql.test -t lpb-sql-test .
+docker build --build-arg PHP_VERSION="${PHP_VERSION:-8.2}" -f config/docker/Dockerfile.sql.test -t lpb-sql-test .
 
 echo ""
 echo "Running SQL Integration Test..."

@@ -24,7 +24,7 @@ Design decisions are recorded in [docs/adr](docs/adr) (ADR 07–13).
 ## Requirements
 
 - PHP 8.2+
-- Laravel 10, 11 or 12
+- Laravel 10, 11, 12 or 13
 - For MongoDB: the `mongodb` PHP extension and `mongodb/laravel-mongodb` ^5.0
 - For the Inertia flow: `inertiajs/inertia-laravel`
 

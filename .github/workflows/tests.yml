@@ -23,6 +23,10 @@ jobs:
       fail-fast: false
       matrix:
         suite: [sql, mysql, mongo]
+        # PHP 8.2 installs Laravel 12, PHP 8.3 the latest Laravel
+        php: ['8.2', '8.3']
     steps:
       - uses: actions/checkout@v4
       - run: shell/test-${{ matrix.suite }}.sh
+        env:
+          PHP_VERSION: ${{ matrix.php }}
