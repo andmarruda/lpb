@@ -120,6 +120,11 @@ php artisan lpb:widgets:schema --output=widgets.json      # definitions and JSON
 php artisan lpb:upgrade-content                           # rewrite stored configs to current versions
 ```
 
+The built-in library (40 widgets: heading, text, image, button, tabs,
+accordion, carousels, price table, countdown, form, nav menu…) is registered
+by default. Its `html` widget outputs raw HTML and is only registered with
+`LPB_RAW_HTML_WIDGET=true`; enable it only when every editor is trusted.
+
 Field types: `string`, `integer`, `number`, `boolean`, `enum`, `array`,
 `object`, `media` (`{"$media": id}`, resolved in payloads), `link` and
 `richText` (HTML; renderers sanitise it). Modifiers: `required`, `default`,

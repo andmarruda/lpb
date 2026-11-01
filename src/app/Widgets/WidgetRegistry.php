@@ -188,7 +188,11 @@ class WidgetRegistry
         $config = $this->container->bound('config') ? $this->container->make('config') : null;
         $configured = (array) ($config?->get('laravel-page-builder.widgets.definitions', []) ?? []);
         if ($config?->get('laravel-page-builder.widgets.library', true)) {
-            $configured = [...Library\Library::DEFINITIONS, ...$configured];
+            // The raw HTML widget renders without sanitising: opt-in only
+            $library = $config->get('laravel-page-builder.widgets.raw_html', false)
+                ? Library\Library::DEFINITIONS
+                : array_values(array_diff(Library\Library::DEFINITIONS, [Library\Html::class]));
+            $configured = [...$library, ...$configured];
         }
         foreach ($configured as $definition) {
             $this->register($definition);

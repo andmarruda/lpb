@@ -73,6 +73,10 @@ return [
         // table, ...; see Andmarruda\Lpb\Widgets\Library\Library)
         'library' => env('LPB_WIDGET_LIBRARY', true),
 
+        // The library's "html" widget outputs editor-provided HTML without
+        // sanitising; enable it only when every editor is trusted
+        'raw_html' => env('LPB_RAW_HTML_WIDGET', false),
+
         // WidgetDefinition classes registered at boot; more can be added
         // with Lpb::widgets()->register(Hero::class). A definition with the
         // name of a library widget replaces it.

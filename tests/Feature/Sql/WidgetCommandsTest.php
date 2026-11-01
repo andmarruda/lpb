@@ -64,9 +64,14 @@ class WidgetCommandsTest extends TestCase
         ]);
         $registry = app(WidgetRegistry::class);
 
-        $this->assertCount(count(\Andmarruda\Lpb\Widgets\Library\Library::DEFINITIONS), $registry->all());
+        $this->assertCount(count(\Andmarruda\Lpb\Widgets\Library\Library::DEFINITIONS) - 1, $registry->all());
         $this->assertSame('Price table', $registry->get('price-table')->label);
         $this->assertInstanceOf(\Andmarruda\Lpb\Tests\Fixtures\Widgets\Text::class, $registry->get('text'));
+        $this->assertFalse($registry->has('html'), 'The raw HTML widget must be opt-in');
+
+        $this->app->forgetInstance(WidgetRegistry::class);
+        config(['laravel-page-builder.widgets.raw_html' => true]);
+        $this->assertTrue(app(WidgetRegistry::class)->has('html'));
     }
 
     /**
