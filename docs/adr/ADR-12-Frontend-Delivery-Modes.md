@@ -65,8 +65,8 @@ document, identical for both storage drivers:
 
 ### One package per framework, with or without Inertia
 
-Each framework gets one package (`@lpb/react`, `@lpb/vue`, `@lpb/svelte`,
-`@lpb/angular`; scope still to be confirmed) that contains both halves:
+Each framework gets one package (`@andmarruda/lpb-react`, `@andmarruda/lpb-vue`, `@andmarruda/lpb-svelte`,
+`@andmarruda/lpb-angular`) that contains both halves:
 
 1. **Renderer**: a recursive `<LpbPage>` component that walks the tree,
    renders blocks with their styles and looks widgets up in a registry by
@@ -91,7 +91,7 @@ uses the view and external flows.
 
 ### Shared, framework-agnostic core
 
-Everything that is not UI lives once in `@lpb/core` (plain TypeScript) and is
+Everything that is not UI lives once in `@andmarruda/lpb-core` (plain TypeScript) and is
 used by every framework package:
 
 - tree model and editing commands (insert, move, update, delete), undo/redo
@@ -142,7 +142,7 @@ Svelte and Angular follow, in that order, against the same suites.
   is limited to the shell, so content rendering lives in one place per
   framework.
 - Most logic (state, saving, validation, drag) is written and tested once in
-  `@lpb/core`.
+  `@andmarruda/lpb-core`.
 
 **Negative**:
 - The editor UI is implemented once per framework (four times).
@@ -156,7 +156,7 @@ Svelte and Angular follow, in that order, against the same suites.
 
 **Mitigation**:
 - Keep the per-framework editor code to presentation; anything with logic
-  belongs in `@lpb/core`.
+  belongs in `@andmarruda/lpb-core`.
 - Conformance suites keep renderers and editors consistent.
 - `lpb:make-widget --frameworks=...` scaffolds only the frameworks a site
   uses (ADR 10).

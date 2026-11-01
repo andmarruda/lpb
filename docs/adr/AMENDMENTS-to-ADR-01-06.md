@@ -60,8 +60,8 @@ Changes to the existing wiki ADRs that follow from Phase 1 and ADR 07–13.
 - Add Svelte and Angular to the adapter list, in the order React, Vue,
   Svelte, Angular (React first, replacing the earlier Vue-first plan).
 - The adapters become part of the framework packages of ADR 12
-  (`@lpb/react`, `@lpb/vue`, `@lpb/svelte`, `@lpb/angular`), and the
-  framework-agnostic engine part of `@lpb/core`.
+  (`@andmarruda/lpb-react`, `@andmarruda/lpb-vue`, `@andmarruda/lpb-svelte`, `@andmarruda/lpb-angular`), and the
+  framework-agnostic engine part of `@andmarruda/lpb-core`.
 
 ## Wiki pages
 
