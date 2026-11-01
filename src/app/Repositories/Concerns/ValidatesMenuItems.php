@@ -3,6 +3,7 @@
 namespace Andmarruda\Lpb\Repositories\Concerns;
 
 use Andmarruda\Lpb\Exceptions\InvalidValueException;
+use Andmarruda\Lpb\Support\SafeUrl;
 
 /**
  * Validation of menu item input shared by both drivers.
@@ -30,6 +31,10 @@ trait ValidatesMenuItems
                     throw new InvalidValueException("Menu item {$field} must be a non-empty string.");
                 }
             }
+        }
+
+        if (array_key_exists('url', $attributes) && !SafeUrl::isSafe($attributes['url'])) {
+            throw new InvalidValueException('Menu item url must be an http(s), mailto, tel or relative URL.');
         }
 
         if (array_key_exists('target', $attributes) && !in_array($attributes['target'], ['_self', '_blank', '_parent', '_top'], true)) {

@@ -1,6 +1,6 @@
 {
     "name": "andmarruda/lpb",
-    "description": "Laravel page builder with support for SQL and MongoDB databases, featuring intelligent caching strategies for high performance and scalable content rendering.",
+    "description": "Page builder backend for Laravel: a validated, versioned page tree in SQL or MongoDB, 48 built-in widgets, atomic saves, publishing with rollback, a cache that never goes stale, media on local/S3/R2 or the database, and delivery to React, Vue, Svelte or Angular via Inertia, Blade or a headless API.",
     "type": "library",
     "license": "MIT",
     "autoload": {
@@ -49,5 +49,18 @@
                 "Lpb": "Andmarruda\\Lpb\\Facades\\Lpb"
             }
         }
-    }
+    },
+    "keywords": [
+        "laravel",
+        "page-builder",
+        "cms",
+        "mongodb",
+        "inertia",
+        "headless",
+        "widgets",
+        "react",
+        "vue",
+        "svelte",
+        "angular"
+    ]
 }

@@ -100,6 +100,14 @@ class MenuIntegrationTest extends TestCase
      */
     public function test_rejects_invalid_items(): void
     {
+        foreach (['javascript:alert(1)', '//evil.example', ' JavaScript:x'] as $url) {
+            try {
+                $this->repository->addItem($this->repository->create(['name' => 'X', 'slug' => 'x-' . md5($url), 'location' => 'x'])['id'], ['label' => 'Bad', 'url' => $url]);
+                $this->fail("Menu item url {$url} was accepted");
+            } catch (InvalidValueException) {
+            }
+        }
+
         $menu = $this->createMenu();
 
         foreach ([['url' => '/'], ['label' => 'Home'], ['label' => 'Home', 'url' => '/', 'target' => 'popup'], ['label' => 'Home', 'url' => '/', 'order' => -1]] as $item) {

@@ -26,7 +26,7 @@ class Form extends WidgetDefinition
                 ->string('placeholder')->maxLength(200)
                 ->strings('options'))->required()->label('Fields')
             ->string('submit_text')->maxLength(120)->default('Send')->label('Button text')
-            ->string('action')->required()->maxLength(2048)->label('Submit URL')->help('Endpoint of your application that receives the form')
+            ->url('action')->required()->label('Submit URL')->help('Endpoint of your application that receives the form')
             ->enum('method', ['post', 'get'])->default('post')->label('Method')
             ->string('success_message')->maxLength(500)->label('Success message');
     }

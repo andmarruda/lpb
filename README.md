@@ -124,6 +124,9 @@ The built-in library (48 widgets: heading, text, image, button, tabs,
 accordion, carousels, price table, countdown, form, nav menu…) is registered
 by default. Its `html` widget outputs raw HTML and is only registered with
 `LPB_RAW_HTML_WIDGET=true`; enable it only when every editor is trusted.
+Widgets that are no longer registered are left out of delivered payloads;
+after changing which widgets are registered, run `php artisan
+lpb:design:bump` so cached payloads are rebuilt.
 
 Field types: `string`, `integer`, `number`, `boolean`, `enum`, `array`,
 `object`, `media` (`{"$media": id}`, resolved in payloads), `link` and

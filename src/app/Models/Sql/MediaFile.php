@@ -17,5 +17,5 @@ class MediaFile extends Model
 
     public $incrementing = false;
 
-    protected $fillable = ['media_id', 'contents'];
+    protected $fillable = ['media_id', 'path', 'contents'];
 }

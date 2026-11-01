@@ -4,6 +4,8 @@ namespace Andmarruda\Lpb\Webhooks;
 use Andmarruda\Lpb\Delivery\DesignVersion;
 use Andmarruda\Lpb\Events\DesignVersionBumped;
 use Andmarruda\Lpb\Events\PageArchived;
+use Andmarruda\Lpb\Events\PageDeleted;
+use Andmarruda\Lpb\Events\PageSlugChanged;
 use Andmarruda\Lpb\Events\PageEvent;
 use Andmarruda\Lpb\Events\PagePublished;
 use Andmarruda\Lpb\Events\PageRolledBack;
@@ -13,10 +15,12 @@ use Illuminate\Contracts\Bus\Dispatcher as Bus;
 
 /**
  * Queues a signed webhook per configured endpoint on publish, unpublish,
- * archive, rollback and design bumps, so external frontends can revalidate
- * their own caches. Nothing is sent without endpoints and a secret.
+ * archive, rollback, page deletion, slug changes and design bumps, so
+ * external frontends can revalidate their own caches. Nothing is sent
+ * without endpoints and a secret.
  *
- * Body: {event, site, locale, slug, revision_id, design_version}.
+ * Body: {event, site, locale, slug, revision_id, design_version}, plus
+ * old_slug on page.slug_changed.
  */
 class NotifyWebhooks
 {
@@ -43,6 +47,31 @@ class NotifyWebhooks
         ]);
     }
 
+    public function deleted(PageDeleted $event): void
+    {
+        $this->send([
+            'event' => 'page.deleted',
+            'site' => CacheKey::DEFAULT,
+            'locale' => CacheKey::DEFAULT,
+            'slug' => $event->slug,
+            'revision_id' => null,
+            'design_version' => $this->design->current(),
+        ]);
+    }
+
+    public function renamed(PageSlugChanged $event): void
+    {
+        $this->send([
+            'event' => 'page.slug_changed',
+            'site' => CacheKey::DEFAULT,
+            'locale' => CacheKey::DEFAULT,
+            'slug' => $event->newSlug,
+            'old_slug' => $event->oldSlug,
+            'revision_id' => null,
+            'design_version' => $this->design->current(),
+        ]);
+    }
+
     public function design(DesignVersionBumped $event): void
     {
         $this->send([
@@ -62,7 +91,11 @@ class NotifyWebhooks
      */
     public static function listens(): array
     {
-        return array_fill_keys(array_keys(self::EVENTS), 'page') + [DesignVersionBumped::class => 'design'];
+        return array_fill_keys(array_keys(self::EVENTS), 'page') + [
+            PageDeleted::class => 'deleted',
+            PageSlugChanged::class => 'renamed',
+            DesignVersionBumped::class => 'design',
+        ];
     }
 
     private function send(array $payload): void

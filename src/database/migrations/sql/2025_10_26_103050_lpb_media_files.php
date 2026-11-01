@@ -14,6 +14,7 @@ return new class extends Migration {
         // every driver stores them as text
         Schema::create('lpb_media_files', function (Blueprint $table) {
             $table->unsignedBigInteger('media_id')->primary();
+            $table->string('path');
             $table->longText('contents');
             $table->timestamps();
 

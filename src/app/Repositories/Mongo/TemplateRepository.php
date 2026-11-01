@@ -131,10 +131,12 @@ class TemplateRepository extends BaseRepository implements TemplateRepositoryInt
             return false;
         }
 
-        $page->template_id = (string) $template->getKey();
-        $page->template_slug = $template->slug;
-        $page->tree_version = ($page->tree_version ?? 0) + 1;
-        $page->save();
+        // $inc: a concurrent saveTree must not swallow this version bump
+        $this->pages->newQuery()->whereKey($page->getKey())->update([
+            'template_id' => (string) $template->getKey(),
+            'template_slug' => $template->slug,
+            '$inc' => ['tree_version' => 1],
+        ]);
         return true;
     }
 
@@ -151,10 +153,11 @@ class TemplateRepository extends BaseRepository implements TemplateRepositoryInt
             return false;
         }
 
-        $page->template_id = null;
-        $page->template_slug = null;
-        $page->tree_version = ($page->tree_version ?? 0) + 1;
-        $page->save();
+        $this->pages->newQuery()->whereKey($page->getKey())->update([
+            'template_id' => null,
+            'template_slug' => null,
+            '$inc' => ['tree_version' => 1],
+        ]);
         return true;
     }
 }

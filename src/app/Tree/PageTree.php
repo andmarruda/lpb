@@ -63,6 +63,23 @@ final class PageTree
     }
 
     /**
+     * The blocks without widget instances whose widget is not registered.
+     *
+     * @param array $blocks Nested blocks
+     * @return array
+     */
+    public static function onlyRegistered(array $blocks): array
+    {
+        $widgets = app(WidgetRegistry::class);
+
+        return array_map(function (array $block) use ($widgets) {
+            $block['widgets'] = array_values(array_filter($block['widgets'] ?? [], fn (array $instance) => $widgets->has((string) ($instance['widget'] ?? ''))));
+            $block['children'] = self::onlyRegistered($block['children'] ?? []);
+            return $block;
+        }, $blocks);
+    }
+
+    /**
      * Number of widget instances whose config is older than its definition.
      *
      * @param array $blocks Nested blocks

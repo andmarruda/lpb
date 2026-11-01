@@ -20,7 +20,7 @@ class Blockquote extends WidgetDefinition
         return $s
             ->richText('content')->required()->label('Quote')
             ->string('author')->maxLength(200)->label('Author')
-            ->string('cite')->maxLength(2048)->label('Source URL');
+            ->url('cite')->label('Source URL');
     }
 
     public function example(): array

@@ -18,7 +18,7 @@ class SearchForm extends WidgetDefinition
     public function schema(Schema $s): Schema
     {
         return $s
-            ->string('action')->required()->maxLength(2048)->default('/search')->label('Search URL')
+            ->url('action')->required()->default('/search')->label('Search URL')
             ->string('param')->pattern('^[A-Za-z][A-Za-z0-9_]*$')->maxLength(40)->default('q')->label('Query parameter')
             ->string('placeholder')->maxLength(200)->default('Search…')->label('Placeholder')
             ->string('button_text')->maxLength(60)->label('Button text');

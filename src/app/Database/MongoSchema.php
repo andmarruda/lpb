@@ -132,8 +132,9 @@ final class MongoSchema
                 ],
             ],
             (new MediaFile())->getTable() => [
-                'validator' => self::schema(['media_id', 'contents'], [
+                'validator' => self::schema(['media_id', 'path', 'contents'], [
                     'media_id' => $string,
+                    'path' => $string,
                     'contents' => $string,
                 ]),
                 'indexes' => [

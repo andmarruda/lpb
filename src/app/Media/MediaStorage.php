@@ -68,7 +68,7 @@ class MediaStorage
         if ($disk === self::DATABASE) {
             $media = $this->media->create($record);
             try {
-                $this->contents->put($media['id'], (string) file_get_contents($file->getRealPath()));
+                $this->contents->put($media['id'], $path, (string) file_get_contents($file->getRealPath()));
             } catch (Throwable $e) {
                 $this->media->delete($media['id']);
                 throw $e;
@@ -99,8 +99,10 @@ class MediaStorage
         $disk = $media['disk'];
         $path = $this->newPath($file, $disk);
 
+        // The stored contents carry their path: if the record update below
+        // fails, the old URL stops matching instead of serving the new bytes
         if ($disk === self::DATABASE) {
-            $this->contents->put($media['id'], (string) file_get_contents($file->getRealPath()));
+            $this->contents->put($media['id'], $path, (string) file_get_contents($file->getRealPath()));
         } else {
             $this->writeToDisk($disk, $path, $file);
         }
@@ -119,6 +121,52 @@ class MediaStorage
         }
         $this->events->dispatch(new MediaChanged((string) $media['id']));
         return $updated;
+    }
+
+    /**
+     * Change the details editors may change (meta such as alt, and the
+     * collection); delivered payloads pick them up.
+     *
+     * @param string|int $id
+     * @param array $data meta and/or collection; other keys are ignored
+     * @return array|null The updated media record, or null if not found
+     */
+    public function updateDetails(string|int $id, array $data): ?array
+    {
+        $media = $this->media->find($id);
+        if (!$media) {
+            return null;
+        }
+
+        $changes = [];
+        if (array_key_exists('meta', $data)) {
+            if (!is_array($data['meta'])) {
+                throw new InvalidValueException('Media meta must be an object.');
+            }
+            // Dimensions describe the stored file and stay as measured
+            $changes['meta'] = array_merge((array) ($media['meta'] ?? []), array_diff_key($data['meta'], ['width' => true, 'height' => true]));
+        }
+        if (array_key_exists('collection', $data)) {
+            $changes['collection'] = $data['collection'];
+        }
+        if ($changes === []) {
+            return $media;
+        }
+
+        $updated = $this->media->update($id, $changes);
+        $this->events->dispatch(new MediaChanged((string) $media['id']));
+        return $updated;
+    }
+
+    /**
+     * Whether a disk and path may be recorded for a file that is already
+     * stored: an allowed disk and a relative path without traversal.
+     */
+    public function isRecordablePath(mixed $disk, mixed $path): bool
+    {
+        return is_string($disk) && $disk !== self::DATABASE && in_array($disk, $this->disks(), true)
+            && is_string($path) && $path !== '' && !str_starts_with($path, '/')
+            && !preg_match('#(^|[/\\\\])\.\.?([/\\\\]|$)|\\\\|\x00#', $path);
     }
 
     /**
@@ -171,12 +219,17 @@ class MediaStorage
      */
     public function read(string|int $id, string $file): ?array
     {
-        $media = $this->media->find($id);
+        try {
+            $media = $this->media->find($id);
+        } catch (Throwable) {
+            // An id the database cannot even compare (e.g. text for a bigint)
+            return null;
+        }
         if (!$media || $media['disk'] !== self::DATABASE || basename((string) $media['path']) !== $file) {
             return null;
         }
 
-        $contents = $this->contents->get($media['id']);
+        $contents = $this->contents->get($media['id'], (string) $media['path']);
         return $contents === null ? null : ['contents' => $contents, 'mime_type' => $media['mime_type'], 'filename' => $media['filename']];
     }
 

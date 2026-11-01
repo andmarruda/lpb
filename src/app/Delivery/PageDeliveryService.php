@@ -109,7 +109,9 @@ class PageDeliveryService
      */
     private function present(array $tree, ?string $revisionId, ?int $designVersion): array
     {
-        $tree['blocks'] = $this->references->resolve(PageTree::upgrade($tree['blocks'] ?? []));
+        // Widgets no longer registered (e.g. the raw html widget after it was
+        // turned off) are not delivered, even from older revisions
+        $tree['blocks'] = $this->references->resolve(PageTree::upgrade(PageTree::onlyRegistered($tree['blocks'] ?? [])));
         $tree['revision_id'] = $revisionId;
         $tree['design_version'] = $designVersion;
         unset($tree['tree_version']);

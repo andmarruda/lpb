@@ -200,6 +200,43 @@ trait DeliveryScenario
     }
 
     /**
+     * Test widgets that are no longer registered are left out of payloads
+     */
+    public function test_unregistered_widgets_are_not_delivered(): void
+    {
+        ['page' => $page] = $this->deliverablePage('home', 'Welcome');
+        $tree = app(PageTreeRepositoryInterface::class)->getWorkingTree($page['id']);
+        $tree['blocks'][0]['widgets'][] = ['id' => Ulid::generate(), 'widget' => 'text', 'schema_version' => 1, 'config' => ['body' => '<p>x</p>'], 'styles' => []];
+        app(PageTreeRepositoryInterface::class)->saveTree($page['id'], $tree, $tree['tree_version']);
+        app(PublishingServiceInterface::class)->publish($page['id']);
+
+        $this->app->forgetInstance(\Andmarruda\Lpb\Widgets\WidgetRegistry::class);
+        app(\Andmarruda\Lpb\Widgets\WidgetRegistry::class)->register(\Andmarruda\Lpb\Tests\Fixtures\Widgets\Hero::class);
+        $this->artisan('lpb:design:bump')->assertSuccessful();
+
+        $widgets = $this->delivery()->published('home')['blocks'][0]['widgets'];
+        $this->assertSame(['hero'], array_column($widgets, 'widget'));
+    }
+
+    /**
+     * Test deleting or renaming a published page notifies the webhooks
+     */
+    public function test_webhooks_for_deleted_and_renamed_pages(): void
+    {
+        config(['laravel-page-builder.webhooks.endpoints' => ['https://front.example/hook'], 'laravel-page-builder.webhooks.secret' => 'shh']);
+        Bus::fake([SendWebhook::class]);
+        ['page' => $page] = $this->deliverablePage('home', 'Welcome');
+
+        app(PageRepositoryInterface::class)->update($page['id'], ['slug' => 'start']);
+        app(PageRepositoryInterface::class)->delete($page['id']);
+
+        $bodies = Bus::dispatched(SendWebhook::class)->map(fn (SendWebhook $job) => json_decode($job->body, true))->all();
+        $this->assertSame(['page.slug_changed', 'page.deleted'], array_column($bodies, 'event'));
+        $this->assertSame(['start', 'home'], [$bodies[0]['slug'], $bodies[0]['old_slug']]);
+        $this->assertSame('start', $bodies[1]['slug']);
+    }
+
+    /**
      * Test publishing events queue signed webhooks to every endpoint
      */
     public function test_webhooks(): void

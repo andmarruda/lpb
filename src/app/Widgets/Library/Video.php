@@ -19,7 +19,7 @@ class Video extends WidgetDefinition
     {
         return $s
             ->enum('source', ['youtube', 'vimeo', 'file'])->required()->default('youtube')->label('Source')
-            ->string('url')->maxLength(2048)->label('URL')->help('YouTube or Vimeo link')
+            ->url('url')->label('URL')->help('YouTube or Vimeo link')
             ->media('file')->label('Video file')
             ->media('poster')->label('Poster image')
             ->enum('aspect_ratio', ['16:9', '4:3', '1:1', '9:16', '21:9'])->default('16:9')->label('Aspect ratio')

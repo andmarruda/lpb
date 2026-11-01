@@ -14,14 +14,14 @@ class MediaContentsRepository implements MediaContentsRepositoryInterface
     {
     }
 
-    public function put(string|int $mediaId, string $contents): void
+    public function put(string|int $mediaId, string $path, string $contents): void
     {
-        $this->model->newQuery()->updateOrCreate(['media_id' => (string) $mediaId], ['contents' => base64_encode($contents)]);
+        $this->model->newQuery()->updateOrCreate(['media_id' => (string) $mediaId], ['path' => $path, 'contents' => base64_encode($contents)]);
     }
 
-    public function get(string|int $mediaId): ?string
+    public function get(string|int $mediaId, string $path): ?string
     {
-        $contents = $this->model->newQuery()->where('media_id', (string) $mediaId)->value('contents');
+        $contents = $this->model->newQuery()->where('media_id', (string) $mediaId)->where('path', $path)->value('contents');
         return $contents === null ? null : (base64_decode($contents, true) ?: null);
     }
 

@@ -73,6 +73,23 @@ class ConfigValidatorTest extends TestCase
     }
 
     /**
+     * Test link and url fields accept web, mail and relative URLs only
+     */
+    public function test_url_fields_refuse_unsafe_schemes(): void
+    {
+        $schema = Schema::make()->link('link')->url('action')->toArray();
+        $validator = new ConfigValidator();
+
+        foreach (['https://example.com', '/contact', '#top', 'mailto:a@b.c', 'tel:+5511', 'page?x=1'] as $url) {
+            $this->assertSame([], $validator->validate(['link' => ['url' => $url], 'action' => $url], $schema), $url);
+        }
+        foreach (['javascript:alert(1)', 'data:text/html,x', '//evil.example', '/\\evil.example', 'vbscript:x', ' javascript:x'] as $url) {
+            $paths = array_column($validator->validate(['link' => ['url' => $url], 'action' => $url], $schema), 'path');
+            $this->assertSame(['/link/url', '/action'], $paths, $url);
+        }
+    }
+
+    /**
      * Test $dynamic references are rejected anywhere in the config
      */
     public function test_rejects_dynamic_references(): void

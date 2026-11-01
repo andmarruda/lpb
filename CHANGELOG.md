@@ -1,6 +1,8 @@
 # Changelog
 
-## 0.1.0-beta.1 (unreleased)
+## 0.1.0-beta.1 "Kessel Run" (unreleased)
+
+Full description: [docs/releases/0.1.0-beta.1-kessel-run.md](docs/releases/0.1.0-beta.1-kessel-run.md).
 
 First open beta of the Laravel package. Migrations may still change until
 `v0.1.0` (ADR 13).

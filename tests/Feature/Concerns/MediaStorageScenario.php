@@ -184,6 +184,41 @@ trait MediaStorageScenario
         Storage::disk('public')->assertMissing($replaced['path']);
     }
 
+    /**
+     * Test recording existing files is limited to allowed disks and safe paths,
+     * and editors change only details, which refresh delivered payloads
+     */
+    public function test_editor_record_and_detail_rules(): void
+    {
+        Storage::fake('public');
+        Gate::define('lpb.edit', fn ($user = null) => $user !== null);
+        $this->actingAs(new GenericUser(['id' => 1]));
+        $record = fn (array $data) => $this->postJson('/lpb/api/editor/media', $data + ['filename' => 'a.png', 'mime_type' => 'image/png', 'size' => 1]);
+
+        $record(['disk' => 'local', 'path' => 'invoices/x.png'])->assertUnprocessable();
+        $record(['disk' => 'public', 'path' => '../.env'])->assertUnprocessable();
+        $record(['disk' => 'public', 'path' => 'a/../../b.png'])->assertUnprocessable();
+        $record(['disk' => 'database', 'path' => 'x.png'])->assertUnprocessable();
+        $record(['disk' => 'public', 'path' => 'x.html', 'mime_type' => 'text/html'])->assertUnprocessable();
+        $media = $record(['disk' => 'public', 'path' => 'uploads/a.png'])->assertCreated()->json();
+
+        $design = app(DesignVersion::class)->current();
+        $updated = $this->patchJson("/lpb/api/editor/media/{$media['id']}", ['meta' => ['alt' => 'New alt', 'width' => 9999], 'path' => 'other/b.png', 'disk' => 'local', 'mime_type' => 'text/html'])->assertOk()->json();
+        $this->assertSame('New alt', $updated['meta']['alt']);
+        $this->assertArrayNotHasKey('width', $updated['meta']);
+        $this->assertSame(['public', 'uploads/a.png', 'image/png'], [$updated['disk'], $updated['path'], $updated['mime_type']]);
+        $this->assertSame($design + 1, app(DesignVersion::class)->current());
+    }
+
+    /**
+     * Test the database media route answers 404 for ids the database cannot compare
+     */
+    public function test_media_route_with_invalid_ids(): void
+    {
+        $this->get('/lpb/api/media/not-an-id/x.png')->assertNotFound();
+        $this->get('/lpb/api/media/999999/x.png')->assertNotFound();
+    }
+
     private function publishedPageWithImage(string|int $mediaId): string
     {
         $page = app(PageRepositoryInterface::class)->create(['title' => 'Media', 'slug' => 'media']);

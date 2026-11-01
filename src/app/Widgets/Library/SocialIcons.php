@@ -18,7 +18,7 @@ class SocialIcons extends WidgetDefinition
     public function schema(Schema $s): Schema
     {
         return $s
-            ->array('items', fn (Schema $i) => $i->enum('network', ['facebook', 'x', 'instagram', 'linkedin', 'youtube', 'tiktok', 'github', 'whatsapp', 'telegram', 'pinterest', 'reddit', 'email'])->required()->string('url')->required()->maxLength(2048))->required()->label('Networks')
+            ->array('items', fn (Schema $i) => $i->enum('network', ['facebook', 'x', 'instagram', 'linkedin', 'youtube', 'tiktok', 'github', 'whatsapp', 'telegram', 'pinterest', 'reddit', 'email'])->required()->url('url')->required())->required()->label('Networks')
             ->enum('shape', ['rounded', 'square', 'circle'])->default('rounded')->label('Shape')
             ->integer('size')->min(12)->max(120)->default(32)->label('Size (px)');
     }

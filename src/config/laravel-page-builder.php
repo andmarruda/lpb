@@ -28,15 +28,6 @@ return [
         'mongodb' => env('LPB_MONGODB_CONNECTION', 'mongodb'),
     ],
 
-    /*
-    |--------------------------------------------------------------------------
-    | Tables/Collections Prefix
-    |--------------------------------------------------------------------------
-    |
-    | Prefix for database tables/collections (default: lpb_)
-    |
-    */
-    'table_prefix' => env('LPB_TABLE_PREFIX', 'lpb_'),
 
     /*
     |--------------------------------------------------------------------------
@@ -229,18 +220,5 @@ return [
         'timeout' => 10,
     ],
 
-    /*
-    |--------------------------------------------------------------------------
-    | Performance Settings
-    |--------------------------------------------------------------------------
-    |
-    | Configure performance optimization options
-    |
-    */
-    'performance' => [
-        'eager_load_blocks' => true,
-        'eager_load_metatags' => true,
-        'chunk_size' => 100,
-    ],
 
 ];

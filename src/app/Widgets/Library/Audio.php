@@ -19,7 +19,7 @@ class Audio extends WidgetDefinition
     {
         return $s
             ->media('file')->label('Audio file')
-            ->string('url')->maxLength(2048)->label('Audio URL')
+            ->url('url')->label('Audio URL')
             ->string('title')->maxLength(200)->label('Title')
             ->boolean('autoplay')->default(false)->label('Autoplay')
             ->boolean('loop')->default(false)->label('Loop');

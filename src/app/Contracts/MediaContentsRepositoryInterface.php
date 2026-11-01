@@ -6,9 +6,15 @@ namespace Andmarruda\Lpb\Contracts;
  */
 interface MediaContentsRepositoryInterface
 {
-    public function put(string|int $mediaId, string $contents): void;
+    /**
+     * Store the contents of a media record under the record's path.
+     */
+    public function put(string|int $mediaId, string $path, string $contents): void;
 
-    public function get(string|int $mediaId): ?string;
+    /**
+     * The contents, or null when none are stored for that path.
+     */
+    public function get(string|int $mediaId, string $path): ?string;
 
     public function delete(string|int $mediaId): void;
 }

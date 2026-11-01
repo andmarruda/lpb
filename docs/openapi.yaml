@@ -69,6 +69,17 @@ paths:
         '403': { description: Invalid or expired signature }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /media/{media}/{file}:
+    get:
+      tags: [delivery]
+      summary: A media file stored on the "database" disk (immutable; the name changes on replace)
+      parameters:
+        - { name: media, in: path, required: true, schema: { type: string } }
+        - { name: file, in: path, required: true, schema: { type: string, example: 01jbx3k2q8m4t0v9w7y6z5a1b2.png } }
+      responses:
+        '200': { description: The file, with nosniff and a sandboxing Content-Security-Policy }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /editor/widgets:
     get:
       tags: [editor]
@@ -293,11 +304,43 @@ paths:
         - { name: mime_type, in: query, schema: { type: string, example: 'image/*' } }
         - { name: search, in: query, schema: { type: string } }
       responses: { '200': { description: '{data: Media[]}' } }
-    post: { tags: [editor], summary: 'Create a record of a stored file (disk, path, filename, mime_type, size, meta, collection)', responses: { '201': { description: Media } } }
+    post: { tags: [editor], summary: 'Record a file already stored on an allowed disk (disk, relative path, filename, mime_type, size, meta, collection)', responses: { '201': { description: Media with url }, '422': { $ref: '#/components/responses/Invalid' } } }
+  /editor/media/upload:
+    post:
+      tags: [editor]
+      summary: Upload an image, video or audio file to the configured media disk (local, S3, R2, ... or the database)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary, description: Type detected from the contents (media.mimes), size up to media.max_size KB }
+                alt: { type: string }
+                collection: { type: string }
+                disk: { type: string, description: One of media.disk and media.disks }
+      responses:
+        '201': { description: Media record with url }
+        '422': { $ref: '#/components/responses/Invalid' }
+  /editor/media/{media}/replace:
+    post:
+      tags: [editor]
+      summary: Replace the file of a media record; the id and meta are kept, the URL changes and payloads are refreshed
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: { type: object, required: [file], properties: { file: { type: string, format: binary } } }
+      responses:
+        '200': { description: Media record with url }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/Invalid' }
   /editor/media/{media}:
-    get: { tags: [editor], summary: Media record, responses: { '200': { description: Media } } }
-    patch: { tags: [editor], summary: Update a media record, responses: { '200': { description: Media } } }
-    delete: { tags: [editor], summary: Delete a media record, responses: { '204': { description: Deleted } } }
+    get: { tags: [editor], summary: Media record with url, responses: { '200': { description: Media } } }
+    patch: { tags: [editor], summary: 'Update details only: meta (alt, title, ...) and collection; refreshes payloads', responses: { '200': { description: Media } } }
+    delete: { tags: [editor], summary: Delete a media record and its file, responses: { '204': { description: Deleted } } }
 
 components:
   parameters:
@@ -348,7 +391,7 @@ components:
         state: { enum: [null, hover, focus, active] }
         props:
           type: object
-          description: kebab-case CSS properties to strings, numbers or {"$var": "token"}
+          description: 'kebab-case CSS properties to strings, numbers or {"$var": "token"}'
           additionalProperties:
             oneOf:
               - { type: string }

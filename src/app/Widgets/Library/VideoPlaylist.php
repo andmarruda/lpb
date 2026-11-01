@@ -19,7 +19,7 @@ class VideoPlaylist extends WidgetDefinition
     {
         return $s
             ->string('title')->maxLength(200)->label('Title')
-            ->array('videos', fn (Schema $i) => $i->string('title')->required()->maxLength(200)->enum('source', ['youtube', 'vimeo', 'file'])->required()->string('url')->maxLength(2048)->media('file')->media('thumbnail')->string('duration')->maxLength(20))->required()->min(1)->label('Videos');
+            ->array('videos', fn (Schema $i) => $i->string('title')->required()->maxLength(200)->enum('source', ['youtube', 'vimeo', 'file'])->required()->url('url')->media('file')->media('thumbnail')->string('duration')->maxLength(20))->required()->min(1)->label('Videos');
     }
 
     public function example(): array

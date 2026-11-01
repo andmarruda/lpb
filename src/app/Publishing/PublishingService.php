@@ -40,7 +40,9 @@ class PublishingService implements PublishingServiceInterface
         $revisionId = (string) $revision['id'];
 
         $this->pages->setPublication($pageId, PublishState::Published, $revisionId);
-        $this->revisions->prune(self::TYPE, $pageId, max(1, (int) config('laravel-page-builder.revisions.keep', 3)), $revisionId);
+        // Protect what the page serves now: a concurrent publish may have won
+        $served = $this->pages->find($pageId)['published_revision_id'] ?? $revisionId;
+        $this->revisions->prune(self::TYPE, $pageId, max(1, (int) config('laravel-page-builder.revisions.keep', 3)), (string) $served);
 
         $this->events->dispatch(new PagePublished($pageId, $page['slug'], $revisionId, $by));
         return $revision;

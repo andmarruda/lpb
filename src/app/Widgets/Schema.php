@@ -2,6 +2,7 @@
 namespace Andmarruda\Lpb\Widgets;
 
 use Andmarruda\Lpb\Exceptions\InvalidValueException;
+use Andmarruda\Lpb\Support\SafeUrl;
 use Closure;
 
 /**
@@ -139,7 +140,7 @@ final class Schema
         return $this->field($name, [
             'type' => 'object',
             'properties' => [
-                'url' => ['type' => 'string', 'maxLength' => 2048],
+                'url' => ['type' => 'string', 'maxLength' => 2048, 'pattern' => SafeUrl::PATTERN],
                 'target' => ['enum' => ['_self', '_blank']],
                 'label' => ['type' => 'string'],
             ],
@@ -147,6 +148,14 @@ final class Schema
             'additionalProperties' => false,
             'x-lpb-type' => 'link',
         ]);
+    }
+
+    /**
+     * A URL: http(s), mailto, tel or relative (javascript: and other schemes are refused).
+     */
+    public function url(string $name): self
+    {
+        return $this->field($name, ['type' => 'string', 'maxLength' => 2048, 'pattern' => SafeUrl::PATTERN, 'x-lpb-type' => 'url']);
     }
 
     /**

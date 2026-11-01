@@ -15,5 +15,5 @@ class MediaFile extends Model
     protected $connection = 'mongodb';
     protected $table = 'lpb_media_files';
 
-    protected $fillable = ['media_id', 'contents'];
+    protected $fillable = ['media_id', 'path', 'contents'];
 }

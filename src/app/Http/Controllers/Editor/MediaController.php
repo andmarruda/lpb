@@ -74,10 +74,22 @@ class MediaController extends Controller
         return new JsonResponse(['data' => $data]);
     }
 
+    /**
+     * Record a file that is already stored on an allowed disk (no upload).
+     */
     public function store(Request $request): JsonResponse
     {
         $this->authorizeEdit();
-        return new JsonResponse($this->media->create($request->all()), 201);
+        $data = $request->only(['disk', 'path', 'filename', 'mime_type', 'size', 'meta', 'collection']);
+        if (!$this->storage->isRecordablePath($data['disk'] ?? null, $data['path'] ?? null)) {
+            return new JsonResponse(['message' => 'The disk must be one of: ' . implode(', ', array_diff($this->storage->disks(), [MediaStorage::DATABASE])) . '; the path must be relative, without "..".'], 422);
+        }
+        if (!in_array(strtolower((string) ($data['mime_type'] ?? '')), array_map('strtolower', (array) config('laravel-page-builder.media.mimes', [])), true)) {
+            return new JsonResponse(['message' => 'This media type is not allowed.'], 422);
+        }
+
+        $media = $this->media->create($data);
+        return new JsonResponse($media + ['url' => $this->storage->url($media)], 201);
     }
 
     public function show(string $media): JsonResponse
@@ -90,8 +102,9 @@ class MediaController extends Controller
     public function update(Request $request, string $media): JsonResponse
     {
         $this->authorizeEdit();
-        $updated = $this->media->update($media, $request->all());
-        return $updated ? new JsonResponse($updated) : $this->notFound('Media not found.');
+        // Only details: the file itself changes through replace
+        $updated = $this->storage->updateDetails($media, $request->only(['meta', 'collection']));
+        return $updated ? new JsonResponse($updated + ['url' => $this->storage->url($updated)]) : $this->notFound('Media not found.');
     }
 
     public function destroy(string $media): JsonResponse
